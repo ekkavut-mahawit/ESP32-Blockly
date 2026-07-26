@@ -1,8 +1,23 @@
+// 1. เริ่มต้นสร้าง Blockly Workspace (ปิด sound เพื่อแก้ AudioContext Warning)
 const workspace = Blockly.inject('blocklyDiv', {
-  toolbox: document.getElementById('toolbox')
+  toolbox: document.getElementById('toolbox'),
+  sound: false, // 👈 แก้ปัญหา AudioContext Warning
+  scrollbars: true,
+  zoom: {
+    controls: true,
+    wheel: true,
+    startScale: 1.0,
+    maxScale: 3,
+    minScale: 0.3,
+    scaleSpeed: 1.2
+  }
 });
 
-const pythonGen = Blockly.Python || python.pythonGenerator;
+// รองรับการปรับขนาดหน้าจออัตโนมัติ
+window.addEventListener('resize', () => Blockly.svgResize(workspace));
+
+// 2. กำหนดตัวแปลงโค้ด Python
+const pythonGen = python.pythonGenerator || Blockly.Python;
 
 // --- บล็อกคำสั่งพื้นฐาน ---
 Blockly.Blocks['set_led'] = {
@@ -63,7 +78,8 @@ Blockly.Blocks['analog_read'] = {
   }
 };
 pythonGen['analog_read'] = function(block) {
-  return [`ADC(Pin(${block.getFieldValue('PIN')})).read()`, Blockly.Python.ORDER_ATOMIC];
+  // แก้ไขเป็น pythonGen.ORDER_ATOMIC
+  return [`ADC(Pin(${block.getFieldValue('PIN')})).read()`, pythonGen.ORDER_ATOMIC];
 };
 
 Blockly.Blocks['digital_read'] = {
@@ -73,7 +89,8 @@ Blockly.Blocks['digital_read'] = {
   }
 };
 pythonGen['digital_read'] = function(block) {
-  return [`Pin(${block.getFieldValue('PIN')}, Pin.IN).value()`, Blockly.Python.ORDER_ATOMIC];
+  // แก้ไขเป็น pythonGen.ORDER_ATOMIC
+  return [`Pin(${block.getFieldValue('PIN')}, Pin.IN).value()`, pythonGen.ORDER_ATOMIC];
 };
 
 Blockly.Blocks['set_neopixel'] = {
@@ -105,6 +122,6 @@ document.getElementById('run-btn').addEventListener('click', async () => {
       alert("เกิดข้อผิดพลาดจากบอร์ด: " + response.status);
     }
   } catch (err) {
-    alert("❌ ส่งไม่สำเร็จ! กรุณาเช็กว่ามือถือต่อ Wi-Fi 'ESP32-Blockly' หรือยัง?");
+    alert("❌ ส่งไม่สำเร็จ! กรุณาเช็กว่าอุปกรณ์ของคุณเชื่อมต่อ Wi-Fi ของ ESP32 แล้วหรือยัง?");
   }
 });
