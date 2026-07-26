@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32-C3 Wireless Block Coding</title>
+  <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+  <script src="https://unpkg.com/blockly/python_compressed.js"></script>
+  
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; padding: 15px; background-color: #f4f6f9; margin: 0; }
+    
+    /* ==========================================
+       ส่วนที่ 1: กำหนดสไตล์ Header โรงเรียน (ปรับขนาดฟอนต์ตรงนี้ได้เลยครับ)
+       ========================================== */
+    .school-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      background: white;
+      padding: 15px 20px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    /* ขนาดโลโก้โรงเรียน */
+    .school-logo {
+      width: 120px;  /* ✏️ ปรับความกว้างโลโก้ตามต้องการ */
+      height: auto;
+      object-fit: contain;
+    }
+
+    .header-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ชื่อโรงเรียน */
+    .school-name {
+      font-size: 24px; /* ✏️ ปรับขนาดตัวหนังสือชื่อโรงเรียน */
+      font-weight: bold;
+      color: #1a252f;
+      margin: 0;
+    }
+
+    /* ชื่อครูผู้สอน */
+    .teacher-name {
+      font-size: 18px; /* ✏️ ปรับขนาดตัวหนังสือชื่อครู */
+      color: #555555;
+      margin: 3px 0 0 0;
+    }
+
+    /* ชื่อระบบ/หัวข้อเว็บ */
+    .app-title {
+      font-size: 17px; /* ✏️ ปรับขนาดตัวหนังสือชื่อระบบ */
+      font-weight: bold;
+      color: #007bff;
+      margin: 5px 0 0 0;
+    }
+
+
+    /* ==========================================
+       ส่วนที่ 2: ปุ่มควบคุมและพื้นที่ Blockly
+       ========================================== */
+    .control-panel { 
+      background: white; 
+      padding: 10px 15px; 
+      border-radius: 8px; 
+      margin-bottom: 12px; 
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+      display: flex; 
+      align-items: center; 
+      gap: 10px; 
+      flex-wrap: wrap; 
+    }
+    input[type="text"] { padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; width: 130px; }
+    button { padding: 10px 20px; font-size: 15px; font-weight: bold; cursor: pointer; border-radius: 6px; border: none; }
+    .btn-run { background-color: #28a745; color: white; flex-grow: 1; }
+    .btn-run:hover { background-color: #218838; }
+    #blocklyDiv { height: 500px; width: 100%; border-radius: 8px; border: 1px solid #ccc; background-color: #ffffff; }
+  </style>
+</head>
+<body>
+
+  <!-- 🏫 ส่วนหัวเว็บ (School Header) -->
+  <div class="school-header">
+    <!-- ใส่รูปโลโก้โรงเรียน (เปลี่ยนชื่อไฟล์หรือ URL รูปตามต้องการ) -->
+    <img src="logo.png" alt="โลโก้โรงเรียน" class="school-logo" onerror="this.src='https://via.placeholder.com/70?text=LOGO'">
+    
+    <div class="header-info">
+      <!-- ✏️ แก้ไขข้อความในบรรทัดด้านล่างนี้ได้เลยครับ -->
+      <div class="school-name">โรงเรียนมหาชนะชัยวิทยาคม</div>
+      <div class="teacher-name">ครูผู้สอน: ครูเอกวัฒน์ ทาศรีภู</div>
+      <div class="app-title">📱 ระบบเรียนรู้ ESP32-C3 Block Coding (ไร้สาย)</div>
+    </div>
+  </div>
+
+  <!-- 🔌 แผงควบคุม IP และปุ่มส่งโค้ด -->
+  <div class="control-panel">
+    <label><b>IP บอร์ด:</b></label>
+    <input type="text" id="board-ip" value="192.168.4.1">
+    <button id="run-btn" class="btn-run">🚀 ส่งโค้ดไร้สาย (Run)</button>
+  </div>
+
+  <!-- 🧩 พื้นที่วางบล็อก -->
+  <div id="blocklyDiv"></div>
+
+  <!-- 📦 รายการบล็อกคำสั่ง -->
+  <xml id="toolbox" style="display: none">
+    <category name="1. พื้นฐาน & เสียง" colour="#5b80a5">
+      <block type="set_led"></block>
+      <block type="digital_write"></block>
+      <block type="play_buzzer"></block>
+      <block type="set_servo"></block>
+      <block type="delay_time"></block>
+    </category>
+
+    <category name="2. เซนเซอร์อนาล็อก" colour="#a5805b">
+      <block type="analog_read"></block>
+      <block type="digital_read"></block>
+    </category>
+
+    <category name="3. ไฟ RGB NeoPixel" colour="#a55b80">
+      <block type="set_neopixel"></block>
+    </category>
+
+    <category name="ลูป & เงื่อนไข" colour="#5ba55b">
+      <block type="controls_repeat_ext">
+        <value name="TIMES">
+          <shadow type="math_number"><field name="NUM">5</field></shadow>
+        </value>
+      </block>
+      <block type="controls_if"></block>
+    </category>
+  </xml>
+
+  <script src="app.js"></script>
+</body>
+</html>
