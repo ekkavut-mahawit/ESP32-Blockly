@@ -2,16 +2,18 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>ESP32-C3 Wireless Block Coding</title>
-  <script src="https://unpkg.com/blockly/blockly.min.js"></script>
-  <script src="https://unpkg.com/blockly/python_compressed.js"></script>
+  
+  <!-- 📌 ล็อกเวอร์ชัน 9.3.3 เพื่อป้องกันโครงสร้าง Generator เปลี่ยนเอง -->
+  <script src="https://unpkg.com/blockly@9.3.3/blockly.min.js"></script>
+  <script src="https://unpkg.com/blockly@9.3.3/python_compressed.js"></script>
   
   <style>
     body { font-family: 'Segoe UI', Tahoma, sans-serif; padding: 15px; background-color: #f4f6f9; margin: 0; }
     
     /* ==========================================
-       ส่วนที่ 1: กำหนดสไตล์ Header โรงเรียน (ปรับขนาดฟอนต์ตรงนี้ได้เลยครับ)
+       ส่วนที่ 1: Header โรงเรียน
        ========================================== */
     .school-header {
       display: flex;
@@ -24,9 +26,8 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
 
-    /* ขนาดโลโก้โรงเรียน */
     .school-logo {
-      width: 120px;  /* ✏️ ปรับความกว้างโลโก้ตามต้องการ */
+      width: 120px;
       height: auto;
       object-fit: contain;
     }
@@ -36,32 +37,28 @@
       flex-direction: column;
     }
 
-    /* ชื่อโรงเรียน */
     .school-name {
-      font-size: 24px; /* ✏️ ปรับขนาดตัวหนังสือชื่อโรงเรียน */
+      font-size: 24px;
       font-weight: bold;
       color: #1a252f;
       margin: 0;
     }
 
-    /* ชื่อครูผู้สอน */
     .teacher-name {
-      font-size: 18px; /* ✏️ ปรับขนาดตัวหนังสือชื่อครู */
+      font-size: 18px;
       color: #555555;
       margin: 3px 0 0 0;
     }
 
-    /* ชื่อระบบ/หัวข้อเว็บ */
     .app-title {
-      font-size: 17px; /* ✏️ ปรับขนาดตัวหนังสือชื่อระบบ */
+      font-size: 17px;
       font-weight: bold;
       color: #007bff;
       margin: 5px 0 0 0;
     }
 
-
     /* ==========================================
-       ส่วนที่ 2: ปุ่มควบคุมและพื้นที่ Blockly
+       ส่วนที่ 2: ปุ่มควบคุม และพื้นที่ Blockly
        ========================================== */
     .control-panel { 
       background: white; 
@@ -78,18 +75,25 @@
     button { padding: 10px 20px; font-size: 15px; font-weight: bold; cursor: pointer; border-radius: 6px; border: none; }
     .btn-run { background-color: #28a745; color: white; flex-grow: 1; }
     .btn-run:hover { background-color: #218838; }
-    #blocklyDiv { height: 500px; width: 100%; border-radius: 8px; border: 1px solid #ccc; background-color: #ffffff; }
+    
+    /* touch-action: none ป้องกันจอมือถือเลื่อนสู้กับการลากวางบล็อก */
+    #blocklyDiv { 
+      height: 500px; 
+      width: 100%; 
+      border-radius: 8px; 
+      border: 1px solid #ccc; 
+      background-color: #ffffff;
+      touch-action: none;
+    }
   </style>
 </head>
 <body>
 
   <!-- 🏫 ส่วนหัวเว็บ (School Header) -->
   <div class="school-header">
-    <!-- ใส่รูปโลโก้โรงเรียน (เปลี่ยนชื่อไฟล์หรือ URL รูปตามต้องการ) -->
-    <img src="logo.png" alt="โลโก้โรงเรียน" class="school-logo" onerror="this.src='https://via.placeholder.com/70?text=LOGO'">
+    <img src="logo.png" alt="โลโก้โรงเรียน" class="school-logo" onerror="this.src='https://ekkavut-mahawit.github.io/ESP32-Blockly/logo.png'">
     
     <div class="header-info">
-      <!-- ✏️ แก้ไขข้อความในบรรทัดด้านล่างนี้ได้เลยครับ -->
       <div class="school-name">โรงเรียนมหาชนะชัยวิทยาคม</div>
       <div class="teacher-name">ครูผู้สอน: ครูเอกวัฒน์ ทาศรีภู</div>
       <div class="app-title">📱 ระบบเรียนรู้ ESP32-C3 Block Coding (ไร้สาย)</div>
@@ -100,14 +104,16 @@
   <div class="control-panel">
     <label><b>IP บอร์ด:</b></label>
     <input type="text" id="board-ip" value="192.168.4.1">
-    <button id="run-btn" class="btn-run">🚀 ส่งโค้ดไร้สาย (Run)</button>
+    <button id="run-btn" class="btn-run" onclick="runCode()">🚀 ส่งโค้ดไร้สาย (Run)</button>
   </div>
 
   <!-- 🧩 พื้นที่วางบล็อก -->
   <div id="blocklyDiv"></div>
 
-  <!-- 📦 รายการบล็อกคำสั่ง -->
+  <!-- 📦 รายการบล็อกคำสั่ง (Toolbox) -->
   <xml id="toolbox" style="display: none">
+    
+    <!-- หมวดที่ 1: พื้นฐาน & เสียง -->
     <category name="1. พื้นฐาน & เสียง" colour="#5b80a5">
       <block type="set_led"></block>
       <block type="digital_write"></block>
@@ -116,16 +122,49 @@
       <block type="delay_time"></block>
     </category>
 
+    <!-- หมวดที่ 2: เซนเซอร์อนาล็อก -->
     <category name="2. เซนเซอร์อนาล็อก" colour="#a5805b">
       <block type="analog_read"></block>
       <block type="digital_read"></block>
     </category>
 
+    <!-- หมวดที่ 3: ไฟ RGB NeoPixel -->
     <category name="3. ไฟ RGB NeoPixel" colour="#a55b80">
       <block type="set_neopixel"></block>
     </category>
 
-    <category name="ลูป & เงื่อนไข" colour="#5ba55b">
+    <!-- หมวดที่ 4: คณิตศาสตร์ (เพิ่มใหม่) -->
+    <category name="4. คณิตศาสตร์" colour="#5b67a5">
+      <block type="math_number">
+        <field name="NUM">0</field>
+      </block>
+      <block type="math_arithmetic">
+        <value name="A">
+          <shadow type="math_number"><field name="NUM">1</field></shadow>
+        </value>
+        <value name="B">
+          <shadow type="math_number"><field name="NUM">1</field></shadow>
+        </value>
+      </block>
+    </category>
+
+    <!-- หมวดที่ 5: ตรรกศาสตร์ & การเปรียบเทียบ (เพิ่มใหม่: มากกว่า, น้อยกว่า, เท่ากับ ฯลฯ) -->
+    <category name="5. ตรรกศาสตร์ & เปรียบเทียบ" colour="#337ab7">
+      <block type="logic_compare">
+        <value name="A">
+          <shadow type="math_number"><field name="NUM">0</field></shadow>
+        </value>
+        <value name="B">
+          <shadow type="math_number"><field name="NUM">0</field></shadow>
+        </value>
+      </block>
+      <block type="logic_operation"></block>
+      <block type="logic_negate"></block>
+      <block type="logic_boolean"></block>
+    </category>
+
+    <!-- หมวดที่ 6: ลูป & เงื่อนไข -->
+    <category name="6. ลูป & เงื่อนไข" colour="#5ba55b">
       <block type="controls_repeat_ext">
         <value name="TIMES">
           <shadow type="math_number"><field name="NUM">5</field></shadow>
@@ -133,6 +172,7 @@
       </block>
       <block type="controls_if"></block>
     </category>
+
   </xml>
 
   <script src="app.js"></script>
