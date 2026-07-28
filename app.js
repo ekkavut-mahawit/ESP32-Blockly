@@ -285,55 +285,30 @@ async function executeCode() {
     }
 
     // =======================================
-    // 0. การส่งโค้ดไปยัง Wokwi Simulator
-    // =======================================
-    // =======================================
-    // 0. การส่งโค้ดไปยัง Wokwi Simulator
-    // =======================================
-    // =======================================
-    // =======================================
-    // 0. การส่งโค้ดไปยัง Wokwi Simulator (API Method)
+   // =======================================
+    // 0. การส่งโค้ดไปยัง Wokwi Simulator (Safe postMessage Mode)
     // =======================================
     if (!isHardwareMode) {
         var simIframe = document.getElementById('simFrame');
-        if (simIframe) {
-            // แจ้งเตือนผู้ใช้ระหว่างรอโหลด
-            simIframe.style.opacity = "0.5";
+        if (simIframe && simIframe.contentWindow) {
             
-            // 1. โครงสร้างไฟล์สำหรับ Wokwi (อิงจาก ESP32-C3)
-            const projectData = {
-                "version": 1,
-                "files": [
-                    {
-                        "name": "main.py",
-                        "content": code // โค้ดที่ได้จาก Blockly
-                    },
-                    {
-                        "name": "diagram.json",
-                        // ใส่โครงสร้าง diagram เดิมของคุณครูที่นี่ (เซนเซอร์, ขาต่างๆ)
-                        "content": "{\n  \"version\": 1,\n  \"author\": \"Blockly IDE\",\n  \"editor\": \"wokwi\",\n  \"parts\": [\n    { \"type\": \"board-esp32-c3-devkitm-1\", \"id\": \"esp\", \"top\": 0, \"left\": 0, \"attrs\": {} }\n  ],\n  \"connections\": [\n    [ \"esp:TX\", \"$serialMonitor:RX\", \"\", [] ],\n    [ \"esp:RX\", \"$serialMonitor:TX\", \"\", [] ]\n  ]\n}"
-                    }
-                ]
+            // ใช้โครงสร้างคำสั่งมาตรฐานที่ Wokwi รองรับ
+            var messageData = {
+                type: 'wokwi:set-code',
+                code: code
             };
 
-            // 2. ส่งข้อมูลไปสร้างโปรเจกต์ชั่วคราว
-            fetch('https://wokwi.com/api/projects/create', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(projectData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                // 3. นำ ID โปรเจกต์ใหม่ที่ได้มาใส่ใน iframe
-                const newProjectId = data.id;
-                simIframe.src = `https://wokwi.com/projects/${newProjectId}?embed=1&autoplay=1`;
-                simIframe.style.opacity = "1";
-                alert("🚀 อัปเดตโค้ดลงตัวจำลองเรียบร้อยแล้ว!");
-            })
-            .catch(err => {
-                simIframe.style.opacity = "1";
-                alert("❌ เกิดข้อผิดพลาดในการเชื่อมต่อ Wokwi API: " + err);
-            });
+            try {
+                // ส่งโค้ดไปเงียบๆ (ไม่ต้องส่ง start/restart ตามไปกวนระบบ)
+                simIframe.contentWindow.postMessage(messageData, '*');
+                
+                alert("🚀 ส่งโค้ดไปยังตัวจำลองเรียบร้อยแล้ว!\n(หากเป็นการรันครั้งแรก อย่าลืมกดปุ่ม ▶️ สีเขียวในหน้า Wokwi ด้วยนะครับ)");
+            } catch (error) {
+                alert("❌ เกิดข้อผิดพลาดในการส่งข้อมูล: " + error);
+            }
+            
+        } else {
+            alert("⚠️ ไม่พบส่วนแสดงผล Simulator");
         }
         return;
     }
