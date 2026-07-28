@@ -186,7 +186,6 @@ Blockly.Blocks['oled_print'] = {
 };
 Blockly.Python['oled_print'] = function(block) {
   var text = block.getFieldValue('TEXT');
-  // 💡 ปรับ SCL=7, SDA=6 เพื่อให้ตรงกับโครงสร้าง ESP32-C3
   Blockly.Python.definitions_['import_oled'] = 'from machine import Pin, I2C\nimport ssd1306\ni2c = I2C(0, scl=Pin(7), sda=Pin(6))\noled = ssd1306.SSD1306_I2C(128, 64, i2c)';
   return 'oled.fill(0)\noled.text("' + text + '", 0, 0)\noled.show()\n';
 };
@@ -290,7 +289,6 @@ async function executeCode() {
     if (!isHardwareMode) {
         var simIframe = document.getElementById('simFrame');
         if (simIframe && simIframe.contentWindow) {
-            // ส่งเฉพาะโค้ดเข้าไปอย่างเดียว ไม่บังคับระบบ Wokwi รีสตาร์ท เพื่อป้องกันการแฮงก์
             simIframe.contentWindow.postMessage({
                 type: 'wokwi:set-code',
                 code: code
@@ -302,52 +300,6 @@ async function executeCode() {
         }
         return;
     }
-
-    // =======================================
-    // 1. การส่งโค้ดผ่านสาย USB (Web Serial)
-    // =======================================
-    if (connectionType === 'usb' && serialPort && serialPort.writable) {
-        try {
-            const encoder = new TextEncoder();
-            let writer = serialPort.writable.getWriter();
-            await writer.write(encoder.encode("\x03\x03"));
-            writer.releaseLock();
-
-            await delay(200);
-
-            writer = serialPort.writable.getWriter();
-            const formattedCode = "\x05" + code + "\x04";
-            await writer.write(encoder.encode(formattedCode));
-            writer.releaseLock();
-
-            alert("🚀 อัปเดตโค้ดใหม่ผ่าน USB สำเร็จ!");
-        } catch (err) {
-            alert("❌ ส่งโค้ดทาง USB ล้มเหลว: " + err);
-        }
-
-    // =======================================
-    // 2. การส่งโค้ดผ่าน บลูทูธ (Web BLE)
-    // =======================================
-    } else if (connectionType === 'ble' && rxCharacteristic) {
-        try {
-            const encoder = new TextEncoder();
-            const formattedCode = "\x03\x03\x05" + code + "\x04";
-            const data = encoder.encode(formattedCode);
-
-            const chunkSize = 20;
-            for (let i = 0; i < data.length; i += chunkSize) {
-                const chunk = data.slice(i, i + chunkSize);
-                await rxCharacteristic.writeValue(chunk);
-                await delay(20); 
-            }
-            alert("🚀 อัปเดตโค้ดใหม่ผ่าน Bluetooth สำเร็จ!");
-        } catch (err) {
-            alert("❌ ส่งโค้ดทาง Bluetooth ล้มเหลว: " + err);
-        }
-    } else {
-        alert("⚠️ กรุณากดปุ่มเชื่อมต่อ USB หรือ บลูทูธ ก่อนทำการรันโค้ดครับ");
-    }
-}
 
     // =======================================
     // 1. การส่งโค้ดผ่านสาย USB (Web Serial)
@@ -381,8 +333,6 @@ async function executeCode() {
     } else if (connectionType === 'ble' && rxCharacteristic) {
         try {
             const encoder = new TextEncoder();
-            
-            // ส่ง Ctrl+C เคลียร์สถานะก่อนส่งโค้ด BLE
             const formattedCode = "\x03\x03\x05" + code + "\x04";
             const data = encoder.encode(formattedCode);
 
@@ -390,7 +340,7 @@ async function executeCode() {
             for (let i = 0; i < data.length; i += chunkSize) {
                 const chunk = data.slice(i, i + chunkSize);
                 await rxCharacteristic.writeValue(chunk);
-                await delay(20); // เว้นระยะห่างกันชน BLE Buffer เต็ม
+                await delay(20);
             }
             alert("🚀 อัปเดตโค้ดใหม่ผ่าน Bluetooth สำเร็จ!");
         } catch (err) {
