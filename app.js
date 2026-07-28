@@ -342,7 +342,7 @@ async function executeCode() {
     // --------------------------------------------------
     if (!isHardwareMode) {
         copyPythonCode();
-        alert("📋 ระบบทำการคัดลอกโค้ดลง Clipboard ให้แล้ว!\n\nคุณครูสามารถกด Ctrl+A แล้ว Ctrl+V วางในไฟล์ main.py บนหน้าต่าง Wokwi ได้เลยครับ");
+        alert("📋 ระบบทำการคัดลอกโค้ดลง Clipboard ให้แล้ว!\n\nกด Ctrl+A แล้ว Ctrl+V วางในไฟล์ main.py บนหน้าต่าง Wokwi ได้เลยครับ");
         return;
     }
 
