@@ -173,7 +173,7 @@ Blockly.Python['set_neopixel'] = function(block) {
   return 'np_' + pin + '[' + num + '] = (' + r + ', ' + g + ', ' + b + ')\nnp_' + pin + '.write()\n';
 };
 
-// 1.9 บล็อกแสดงผลจอ OLED (ปรับขา I2C ให้ตรงกับ ESP32-C3)
+// 1.9 บล็อกแสดงผลจอ OLED (ESP32-C3: SCL=7, SDA=6)
 Blockly.Blocks['oled_print'] = {
   init: function() {
     this.appendDummyInput()
@@ -192,7 +192,7 @@ Blockly.Python['oled_print'] = function(block) {
 
 
 // ======================================================
-// 2. ระบบเชื่อมต่อ & โหลด Workspace
+// 2. ระบบเชื่อมต่อ & โหลด Workspace (แก้อาการบล็อกหาย)
 // ======================================================
 var workspace = null;
 var isHardwareMode = true; 
@@ -204,15 +204,31 @@ var rxCharacteristic = null;
 const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
 const NUS_RX_UUID      = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
 
-// โหลด Workspace เมื่อ DOM พร้อมใช้งาน 100%
-document.addEventListener('DOMContentLoaded', function() {
-    workspace = Blockly.inject('blocklyDiv', {
-        toolbox: document.getElementById('toolbox'),
-        scrollbars: true,
-        zoom: { controls: true, wheel: true, startScale: 1.0 },
-        trashcan: true
-    });
-});
+// ฟังก์ชันสร้าง Workspace ป้องกันปัญหา Race Condition
+function initBlockly() {
+    if (workspace) return;
+    
+    var toolboxElem = document.getElementById('toolbox');
+    var blocklyDiv = document.getElementById('blocklyDiv');
+
+    if (toolboxElem && blocklyDiv) {
+        workspace = Blockly.inject('blocklyDiv', {
+            toolbox: toolboxElem,
+            scrollbars: true,
+            zoom: { controls: true, wheel: true, startScale: 1.0 },
+            trashcan: true
+        });
+
+        Blockly.svgResize(workspace);
+    }
+}
+
+// ตรวจสอบความพร้อมของ DOM ก่อนฉีด Blockly
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initBlockly);
+} else {
+    initBlockly();
+}
 
 
 // ======================================================
@@ -271,7 +287,6 @@ function updateUIConnectionStatus(status) {
     }
 }
 
-// ฟังก์ชันหน่วงเวลาช่วยเว้นจังหวะการส่ง Serial
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function executeCode() {
@@ -283,9 +298,7 @@ async function executeCode() {
         return;
     }
 
-    // =======================================
     // 0. การส่งโค้ดไปยัง Wokwi Simulator
-    // =======================================
     if (!isHardwareMode) {
         var simIframe = document.getElementById('simFrame');
         if (simIframe && simIframe.contentWindow) {
@@ -301,22 +314,17 @@ async function executeCode() {
         return;
     }
 
-    // =======================================
     // 1. การส่งโค้ดผ่านสาย USB (Web Serial)
-    // =======================================
     if (connectionType === 'usb' && serialPort && serialPort.writable) {
         try {
             const encoder = new TextEncoder();
 
-            // สเต็ป A: ส่ง Ctrl+C 2 ครั้ง เพื่อเบรกและยกเลิกโปรแกรมเดิมที่รันอยู่
             let writer = serialPort.writable.getWriter();
             await writer.write(encoder.encode("\x03\x03"));
             writer.releaseLock();
 
-            // สเต็ป B: หน่วงเวลา 0.2 วินาที ให้ MicroPython เคลียร์ REPL ให้พร้อม
             await delay(200);
 
-            // สเต็ป C: ส่งโค้ดชุดใหม่เข้าโหมด Paste Mode (\x05 ... \x04)
             writer = serialPort.writable.getWriter();
             const formattedCode = "\x05" + code + "\x04";
             await writer.write(encoder.encode(formattedCode));
@@ -327,9 +335,7 @@ async function executeCode() {
             alert("❌ ส่งโค้ดทาง USB ล้มเหลว: " + err);
         }
 
-    // =======================================
     // 2. การส่งโค้ดผ่าน บลูทูธ (Web BLE)
-    // =======================================
     } else if (connectionType === 'ble' && rxCharacteristic) {
         try {
             const encoder = new TextEncoder();
