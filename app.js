@@ -108,7 +108,7 @@ Blockly.Blocks['line_sensor_read'] = {
   init: function() {
     this.appendDummyInput()
         .appendField("อ่านค่าเซนเซอร์จับเส้น ขา")
-        .appendField(new Blockly.FieldNumber(13), "PIN");
+        .appendField(new Blockly.FieldNumber(10), "PIN");
     this.setOutput(true, "Number");
     this.setColour(45);
   }
@@ -125,7 +125,7 @@ Blockly.Blocks['servo_move'] = {
   init: function() {
     this.appendDummyInput()
         .appendField("หมุน Servo ขา")
-        .appendField(new Blockly.FieldNumber(18), "PIN")
+        .appendField(new Blockly.FieldNumber(2), "PIN")
         .appendField("ไปที่")
         .appendField(new Blockly.FieldNumber(90, 0, 180), "ANGLE")
         .appendField("องศา");
@@ -173,7 +173,7 @@ Blockly.Python['set_neopixel'] = function(block) {
   return 'np_' + pin + '[' + num + '] = (' + r + ', ' + g + ', ' + b + ')\nnp_' + pin + '.write()\n';
 };
 
-// 1.9 บล็อกแสดงผลจอ OLED
+// 1.9 บล็อกแสดงผลจอ OLED (ปรับขา I2C ให้ตรงกับ ESP32-C3)
 Blockly.Blocks['oled_print'] = {
   init: function() {
     this.appendDummyInput()
@@ -186,7 +186,8 @@ Blockly.Blocks['oled_print'] = {
 };
 Blockly.Python['oled_print'] = function(block) {
   var text = block.getFieldValue('TEXT');
-  Blockly.Python.definitions_['import_oled'] = 'from machine import Pin, I2C\nimport ssd1306\ni2c = I2C(0, scl=Pin(22), sda=Pin(21))\noled = ssd1306.SSD1306_I2C(128, 64, i2c)';
+  // 💡 ปรับ SCL=7, SDA=6 เพื่อให้ตรงกับโครงสร้าง ESP32-C3
+  Blockly.Python.definitions_['import_oled'] = 'from machine import Pin, I2C\nimport ssd1306\ni2c = I2C(0, scl=Pin(7), sda=Pin(6))\noled = ssd1306.SSD1306_I2C(128, 64, i2c)';
   return 'oled.fill(0)\noled.text("' + text + '", 0, 0)\noled.show()\n';
 };
 
@@ -290,7 +291,7 @@ async function executeCode() {
         return;
     }
 
-    // ================= ======================
+    // =======================================
     // 1. การส่งโค้ดผ่านสาย USB (Web Serial)
     // =======================================
     if (connectionType === 'usb' && serialPort && serialPort.writable) {
@@ -316,7 +317,7 @@ async function executeCode() {
             alert("❌ ส่งโค้ดทาง USB ล้มเหลว: " + err);
         }
 
-    // ================= ======================
+    // =======================================
     // 2. การส่งโค้ดผ่าน บลูทูธ (Web BLE)
     // =======================================
     } else if (connectionType === 'ble' && rxCharacteristic) {
