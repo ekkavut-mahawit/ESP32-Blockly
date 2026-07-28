@@ -1,8 +1,8 @@
 // ======================================================
-// 1. นิยามโครงสร้างบล็อกคำสั่ง (Custom Blocks)
+// 1. นิยามโครงสร้างบล็อกคำสั่ง (Custom Blocks & Python Generators)
 // ======================================================
 
-// บล็อกหน่วงเวลา (Time Delay)
+// 1.1 บล็อกหน่วงเวลา (Time Delay)
 Blockly.Blocks['time_delay'] = {
   init: function() {
     this.appendDummyInput()
@@ -20,7 +20,7 @@ Blockly.Python['time_delay'] = function(block) {
   return 'time.sleep(' + seconds + ')\n';
 };
 
-// บล็อกดิจิทัล LED
+// 1.2 บล็อกสั่งงาน LED / ดิจิทัล (Digital Write)
 Blockly.Blocks['digital_write'] = {
   init: function() {
     this.appendDummyInput()
@@ -41,28 +41,86 @@ Blockly.Python['digital_write'] = function(block) {
   return 'pin_' + pin + '.value(' + state + ')\n';
 };
 
-// บล็อก PWM / อนาล็อก LED
-Blockly.Blocks['analog_write'] = {
+// 1.3 บล็อกบัซเซอร์ส่งเสียง (Buzzer)
+Blockly.Blocks['play_buzzer'] = {
   init: function() {
     this.appendDummyInput()
-        .appendField("ปรับความสว่าง LED ขา")
-        .appendField(new Blockly.FieldNumber(8), "PIN")
-        .appendField("ค่า (0-1023)")
-        .appendField(new Blockly.FieldNumber(512, 0, 1023), "VALUE");
+        .appendField("ส่งเสียง Buzzer ขา")
+        .appendField(new Blockly.FieldNumber(5), "PIN")
+        .appendField("ความถี่")
+        .appendField(new Blockly.FieldNumber(1000, 100, 5000), "FREQ")
+        .appendField("Hz เป็นเวลา")
+        .appendField(new Blockly.FieldNumber(0.5, 0.1), "TIME")
+        .appendField("วิ");
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(210);
   }
 };
-Blockly.Python['analog_write'] = function(block) {
+Blockly.Python['play_buzzer'] = function(block) {
   var pin = block.getFieldValue('PIN');
-  var val = block.getFieldValue('VALUE');
+  var freq = block.getFieldValue('FREQ');
+  var time = block.getFieldValue('TIME');
   Blockly.Python.definitions_['import_pwm'] = 'from machine import Pin, PWM';
-  Blockly.Python.definitions_['pwm_' + pin] = 'pwm_' + pin + ' = PWM(Pin(' + pin + '))';
-  return 'pwm_' + pin + '.duty(' + val + ')\n';
+  Blockly.Python.definitions_['import_time'] = 'import time';
+  var code = 'bz = PWM(Pin(' + pin + '), freq=' + freq + ', duty=512)\n';
+  code += 'time.sleep(' + time + ')\n';
+  code += 'bz.deinit()\n';
+  return code;
 };
 
-// บล็อกเซอร์โว
+// 1.4 บล็อกอ่านค่าอนาล็อก (Analog Read / ADC)
+Blockly.Blocks['analog_read'] = {
+  init: function() {
+    this.appendDummyInput()
+        .appendField("อ่านค่าอนาล็อก ADC ขา")
+        .appendField(new Blockly.FieldNumber(1), "PIN");
+    this.setOutput(true, "Number");
+    this.setColour(45);
+  }
+};
+Blockly.Python['analog_read'] = function(block) {
+  var pin = block.getFieldValue('PIN');
+  Blockly.Python.definitions_['import_adc'] = 'from machine import Pin, ADC';
+  Blockly.Python.definitions_['adc_' + pin] = 'adc_' + pin + ' = ADC(Pin(' + pin + '))';
+  return ['adc_' + pin + '.read()', Blockly.Python.ORDER_ATOMIC];
+};
+
+// 1.5 บล็อกอ่านค่าดิจิทัล / ปุ่มกด (Digital Read)
+Blockly.Blocks['digital_read'] = {
+  init: function() {
+    this.appendDummyInput()
+        .appendField("อ่านค่าดิจิทัล ขา")
+        .appendField(new Blockly.FieldNumber(9), "PIN");
+    this.setOutput(true, "Number");
+    this.setColour(45);
+  }
+};
+Blockly.Python['digital_read'] = function(block) {
+  var pin = block.getFieldValue('PIN');
+  Blockly.Python.definitions_['import_pin'] = 'from machine import Pin';
+  Blockly.Python.definitions_['in_pin_' + pin] = 'in_pin_' + pin + ' = Pin(' + pin + ', Pin.IN)';
+  return ['in_pin_' + pin + '.value()', Blockly.Python.ORDER_ATOMIC];
+};
+
+// 1.6 บล็อกอ่านค่าเซนเซอร์จับเส้น (Line Sensor)
+Blockly.Blocks['line_sensor_read'] = {
+  init: function() {
+    this.appendDummyInput()
+        .appendField("อ่านค่าเซนเซอร์จับเส้น ขา")
+        .appendField(new Blockly.FieldNumber(13), "PIN");
+    this.setOutput(true, "Number");
+    this.setColour(45);
+  }
+};
+Blockly.Python['line_sensor_read'] = function(block) {
+  var pin = block.getFieldValue('PIN');
+  Blockly.Python.definitions_['import_pin'] = 'from machine import Pin';
+  Blockly.Python.definitions_['sensor_' + pin] = 'sensor_' + pin + ' = Pin(' + pin + ', Pin.IN)';
+  return ['sensor_' + pin + '.value()', Blockly.Python.ORDER_ATOMIC];
+};
+
+// 1.7 บล็อกหมุนเซอร์โว (Servo Move)
 Blockly.Blocks['servo_move'] = {
   init: function() {
     this.appendDummyInput()
@@ -85,7 +143,37 @@ Blockly.Python['servo_move'] = function(block) {
   return 'servo_' + pin + '.duty(' + duty + ')\n';
 };
 
-// บล็อกจอ OLED
+// 1.8 บล็อกไฟ RGB NeoPixel
+Blockly.Blocks['set_neopixel'] = {
+  init: function() {
+    this.appendDummyInput()
+        .appendField("ติดไฟ NeoPixel ขา")
+        .appendField(new Blockly.FieldNumber(8), "PIN")
+        .appendField("ดวงที่")
+        .appendField(new Blockly.FieldNumber(0), "NUM")
+        .appendField("สี R:")
+        .appendField(new Blockly.FieldNumber(255, 0, 255), "R")
+        .appendField("G:")
+        .appendField(new Blockly.FieldNumber(0, 0, 255), "G")
+        .appendField("B:")
+        .appendField(new Blockly.FieldNumber(0, 0, 255), "B");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour(300);
+  }
+};
+Blockly.Python['set_neopixel'] = function(block) {
+  var pin = block.getFieldValue('PIN');
+  var num = block.getFieldValue('NUM');
+  var r = block.getFieldValue('R');
+  var g = block.getFieldValue('G');
+  var b = block.getFieldValue('B');
+  Blockly.Python.definitions_['import_neopixel'] = 'from machine import Pin\nimport neopixel';
+  Blockly.Python.definitions_['np_' + pin] = 'np_' + pin + ' = neopixel.NeoPixel(Pin(' + pin + '), 8)';
+  return 'np_' + pin + '[' + num + '] = (' + r + ', ' + g + ', ' + b + ')\nnp_' + pin + '.write()\n';
+};
+
+// 1.9 บล็อกแสดงผลจอ OLED
 Blockly.Blocks['oled_print'] = {
   init: function() {
     this.appendDummyInput()
@@ -100,23 +188,6 @@ Blockly.Python['oled_print'] = function(block) {
   var text = block.getFieldValue('TEXT');
   Blockly.Python.definitions_['import_oled'] = 'from machine import Pin, I2C\nimport ssd1306\ni2c = I2C(0, scl=Pin(22), sda=Pin(21))\noled = ssd1306.SSD1306_I2C(128, 64, i2c)';
   return 'oled.fill(0)\noled.text("' + text + '", 0, 0)\noled.show()\n';
-};
-
-// บล็อกอ่านเซนเซอร์จับเส้น
-Blockly.Blocks['line_sensor_read'] = {
-  init: function() {
-    this.appendDummyInput()
-        .appendField("อ่านค่าเซนเซอร์จับเส้น ขา")
-        .appendField(new Blockly.FieldNumber(13), "PIN");
-    this.setOutput(true, "Number");
-    this.setColour(120);
-  }
-};
-Blockly.Python['line_sensor_read'] = function(block) {
-  var pin = block.getFieldValue('PIN');
-  Blockly.Python.definitions_['import_pin'] = 'from machine import Pin';
-  Blockly.Python.definitions_['sensor_' + pin] = 'sensor_' + pin + ' = Pin(' + pin + ', Pin.IN)';
-  return ['sensor_' + pin + '.value()', Blockly.Python.ORDER_ATOMIC];
 };
 
 
@@ -156,7 +227,7 @@ async function connectUSB() {
             alert("❌ เชื่อมต่อ USB ไม่สำเร็จ: " + err);
         }
     } else {
-        alert("⚠️ เบราว์เซอร์นี้ไม่รองรับ Web Serial\nแนะนำให้ใช้ Google Chrome หรือ Kiwi Browser");
+        alert("⚠️ เบราว์เซอร์นี้ไม่รองรับ Web Serial\nแนะนำให้ใช้ Google Chrome หรือ Kiwi Browser ครับ");
     }
 }
 
