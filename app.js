@@ -271,6 +271,9 @@ function updateUIConnectionStatus(status) {
     }
 }
 
+// ฟังก์ชันหน่วงเวลาช่วยเว้นจังหวะการส่ง Serial
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 async function executeCode() {
     if (!workspace) return;
     var code = Blockly.Python.workspaceToCode(workspace);
@@ -287,27 +290,50 @@ async function executeCode() {
         return;
     }
 
-    const formattedCode = "\x05" + code + "\x04";
-    const encoder = new TextEncoder();
-    const data = encoder.encode(formattedCode);
-
+    // ================= ======================
+    // 1. การส่งโค้ดผ่านสาย USB (Web Serial)
+    // =======================================
     if (connectionType === 'usb' && serialPort && serialPort.writable) {
         try {
-            const writer = serialPort.writable.getWriter();
-            await writer.write(data);
+            const encoder = new TextEncoder();
+
+            // สเต็ป A: ส่ง Ctrl+C 2 ครั้ง เพื่อเบรกและยกเลิกโปรแกรมเดิมที่รันอยู่
+            let writer = serialPort.writable.getWriter();
+            await writer.write(encoder.encode("\x03\x03"));
             writer.releaseLock();
-            alert("🚀 ส่งโค้ดผ่าน USB สำเร็จ!");
+
+            // สเต็ป B: หน่วงเวลา 0.2 วินาที ให้ MicroPython เคลียร์ REPL ให้พร้อม
+            await delay(200);
+
+            // สเต็ป C: ส่งโค้ดชุดใหม่เข้าโหมด Paste Mode (\x05 ... \x04)
+            writer = serialPort.writable.getWriter();
+            const formattedCode = "\x05" + code + "\x04";
+            await writer.write(encoder.encode(formattedCode));
+            writer.releaseLock();
+
+            alert("🚀 อัปเดตโค้ดใหม่ผ่าน USB สำเร็จ!");
         } catch (err) {
             alert("❌ ส่งโค้ดทาง USB ล้มเหลว: " + err);
         }
+
+    // ================= ======================
+    // 2. การส่งโค้ดผ่าน บลูทูธ (Web BLE)
+    // =======================================
     } else if (connectionType === 'ble' && rxCharacteristic) {
         try {
+            const encoder = new TextEncoder();
+            
+            // ส่ง Ctrl+C เคลียร์สถานะก่อนส่งโค้ด BLE
+            const formattedCode = "\x03\x03\x05" + code + "\x04";
+            const data = encoder.encode(formattedCode);
+
             const chunkSize = 20;
             for (let i = 0; i < data.length; i += chunkSize) {
                 const chunk = data.slice(i, i + chunkSize);
                 await rxCharacteristic.writeValue(chunk);
+                await delay(20); // เว้นระยะห่างกันชน BLE Buffer เต็ม
             }
-            alert("🚀 ส่งโค้ดผ่าน Bluetooth สำเร็จ!");
+            alert("🚀 อัปเดตโค้ดใหม่ผ่าน Bluetooth สำเร็จ!");
         } catch (err) {
             alert("❌ ส่งโค้ดทาง Bluetooth ล้มเหลว: " + err);
         }
