@@ -192,17 +192,11 @@ Blockly.Python['oled_print'] = function(block) {
 
 
 // ======================================================
-// 2. เริ่มต้นสร้าง Blockly Workspace
+// 2. ระบบเชื่อมต่อ & โหลด Workspace
 // ======================================================
-var workspace = Blockly.inject('blocklyDiv', {
-    toolbox: document.getElementById('toolbox'),
-    scrollbars: true,
-    zoom: { controls: true, wheel: true, startScale: 1.0 },
-    trashcan: true
-});
-
+var workspace = null;
 var isHardwareMode = true; 
-var connectionType = null; // 'usb' หรือ 'ble'
+var connectionType = null; 
 
 var serialPort = null; 
 var rxCharacteristic = null;
@@ -210,16 +204,25 @@ var rxCharacteristic = null;
 const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
 const NUS_RX_UUID      = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
 
+// โหลด Workspace เมื่อ DOM พร้อมใช้งาน 100%
+document.addEventListener('DOMContentLoaded', function() {
+    workspace = Blockly.inject('blocklyDiv', {
+        toolbox: document.getElementById('toolbox'),
+        scrollbars: true,
+        zoom: { controls: true, wheel: true, startScale: 1.0 },
+        trashcan: true
+    });
+});
+
 
 // ======================================================
-// 3. ระบบเชื่อมต่อ USB (Web Serial)
+// 3. ฟังก์ชันการเชื่อมต่อ USB / BLE / Execution
 // ======================================================
 async function connectUSB() {
     if ("serial" in navigator) {
         try {
             serialPort = await navigator.serial.requestPort();
             await serialPort.open({ baudRate: 115200 });
-            
             connectionType = 'usb';
             updateUIConnectionStatus('USB Connected');
             alert("✅ เชื่อมต่อบอร์ดผ่านสาย USB สำเร็จ!");
@@ -227,14 +230,10 @@ async function connectUSB() {
             alert("❌ เชื่อมต่อ USB ไม่สำเร็จ: " + err);
         }
     } else {
-        alert("⚠️ เบราว์เซอร์นี้ไม่รองรับ Web Serial\nแนะนำให้ใช้ Google Chrome หรือ Kiwi Browser ครับ");
+        alert("⚠️ เบราว์เซอร์นี้ไม่รองรับ Web Serial\nแนะนำให้ใช้ Google Chrome หรือ Kiwi Browser");
     }
 }
 
-
-// ======================================================
-// 4. ระบบเชื่อมต่อ Bluetooth (Web BLE)
-// ======================================================
 async function connectBLE() {
     if ("bluetooth" in navigator) {
         try {
@@ -242,11 +241,9 @@ async function connectBLE() {
                 filters: [{ namePrefix: 'ESP32' }],
                 optionalServices: [NUS_SERVICE_UUID]
             });
-
             const server = await device.gatt.connect();
             const service = await server.getPrimaryService(NUS_SERVICE_UUID);
             rxCharacteristic = await service.getCharacteristic(NUS_RX_UUID);
-
             connectionType = 'ble';
             updateUIConnectionStatus('BLE Connected');
             alert("✅ เชื่อมต่อบลูทูธ (BLE) สำเร็จ!");
@@ -258,11 +255,9 @@ async function connectBLE() {
     }
 }
 
-
 function updateUIConnectionStatus(status) {
     var usbBtn = document.getElementById('usbBtn');
     var bleBtn = document.getElementById('bleBtn');
-
     if (status === 'USB Connected') {
         usbBtn.innerText = "🟢 USB พร้อมใช้งาน";
         usbBtn.style.backgroundColor = "#16a34a";
@@ -276,11 +271,8 @@ function updateUIConnectionStatus(status) {
     }
 }
 
-
-// ======================================================
-// 5. ฟังก์ชันส่งโค้ดประมวลผล
-// ======================================================
 async function executeCode() {
+    if (!workspace) return;
     var code = Blockly.Python.workspaceToCode(workspace);
 
     if (!code.trim()) {
@@ -295,7 +287,6 @@ async function executeCode() {
         return;
     }
 
-    // ใช้ Paste Mode REPL (\x05 เข้าโหมด, \x04 ประมวลผล)
     const formattedCode = "\x05" + code + "\x04";
     const encoder = new TextEncoder();
     const data = encoder.encode(formattedCode);
@@ -340,5 +331,7 @@ function toggleMode() {
         simContainer.style.display = "flex";
     }
     
-    setTimeout(function() { Blockly.svgResize(workspace); }, 100);
+    if (workspace) {
+        setTimeout(function() { Blockly.svgResize(workspace); }, 100);
+    }
 }
