@@ -298,57 +298,75 @@ async function executeCode() {
         return;
     }
 
-    // 0. การส่งโค้ดไปยัง Wokwi Simulator
+    // --------------------------------------------------
+    // 0. โหมด Simulator (Wokwi) - อัปเดต main.py และสั่งรันใหม่
+    // --------------------------------------------------
     if (!isHardwareMode) {
         var simIframe = document.getElementById('simFrame');
         if (simIframe && simIframe.contentWindow) {
+            
+            // 1) สั่งอัปเดตโค้ดรวมใน Wokwi
             simIframe.contentWindow.postMessage({
                 type: 'wokwi:set-code',
                 code: code
             }, '*');
 
-            alert("🚀 ส่งโค้ดลง Simulator แล้ว!\n(หากจอยังมืด ให้กดปุ่ม Play สีเขียวในหน้า Wokwi 1 ครั้งครับ)");
+            // 2) บังคับเขียนทับลงไฟล์ main.py โดยตรง
+            simIframe.contentWindow.postMessage({
+                type: 'wokwi:set-file',
+                name: 'main.py',
+                content: code
+            }, '*');
+
+            // 3) สั่งให้ Wokwi รีสตาร์ทการจำลองทันทีเพื่อรัน main.py ใหม่
+            simIframe.contentWindow.postMessage({
+                type: 'wokwi:restart'
+            }, '*');
+
+            alert("🚀 อัปเดต main.py ลง Wokwi Simulator เรียบร้อยแล้ว!");
         } else {
             alert("⚠️ ไม่พบส่วนแสดงผล Simulator");
         }
         return;
     }
 
-    // 1. การส่งโค้ดผ่านสาย USB (Web Serial)
+    // --------------------------------------------------
+    // 1. โหมดบอร์ดจริง (Hardware) - USB & Bluetooth
+    // --------------------------------------------------
+    var saveAndRunScript = `with open('main.py', 'w') as f:\n    f.write(${JSON.stringify(code)})\n\nexec(open('main.py').read())\n`;
+
     if (connectionType === 'usb' && serialPort && serialPort.writable) {
         try {
             const encoder = new TextEncoder();
-
             let writer = serialPort.writable.getWriter();
             await writer.write(encoder.encode("\x03\x03"));
             writer.releaseLock();
 
-            await delay(200);
+            await delay(300);
 
             writer = serialPort.writable.getWriter();
-            const formattedCode = "\x05" + code + "\x04";
+            const formattedCode = "\x05" + saveAndRunScript + "\x04";
             await writer.write(encoder.encode(formattedCode));
             writer.releaseLock();
 
-            alert("🚀 อัปเดตโค้ดใหม่ผ่าน USB สำเร็จ!");
+            alert("💾 บันทึกโค้ดลง main.py บนบอร์ดจริงสำเร็จ!");
         } catch (err) {
             alert("❌ ส่งโค้ดทาง USB ล้มเหลว: " + err);
         }
 
-    // 2. การส่งโค้ดผ่าน บลูทูธ (Web BLE)
     } else if (connectionType === 'ble' && rxCharacteristic) {
         try {
             const encoder = new TextEncoder();
-            const formattedCode = "\x03\x03\x05" + code + "\x04";
+            const formattedCode = "\x03\x03\x05" + saveAndRunScript + "\x04";
             const data = encoder.encode(formattedCode);
 
             const chunkSize = 20;
             for (let i = 0; i < data.length; i += chunkSize) {
                 const chunk = data.slice(i, i + chunkSize);
                 await rxCharacteristic.writeValue(chunk);
-                await delay(20);
+                await delay(30);
             }
-            alert("🚀 อัปเดตโค้ดใหม่ผ่าน Bluetooth สำเร็จ!");
+            alert("💾 บันทึกโค้ดลง main.py ผ่าน Bluetooth สำเร็จ!");
         } catch (err) {
             alert("❌ ส่งโค้ดทาง Bluetooth ล้มเหลว: " + err);
         }
