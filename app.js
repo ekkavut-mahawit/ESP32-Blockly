@@ -299,38 +299,36 @@ async function executeCode() {
     }
 
     // --------------------------------------------------
-    // 0. โหมด Simulator (Wokwi) - เขียน main.py & Soft Reset
+    // 0. โหมด Simulator (Wokwi) - เขียน main.py ผ่าน Virtual Serial Direct
     // --------------------------------------------------
     if (!isHardwareMode) {
         var simIframe = document.getElementById('simFrame');
         if (simIframe && simIframe.contentWindow) {
-            
-            // 1) สั่งเขียนทับไฟล์ main.py
+
+            // 1) อัปเดตข้อความบนหน้าต่างโค้ด Wokwi (ถ้ามี)
             simIframe.contentWindow.postMessage({
-                type: 'wokwi:set-file',
-                path: 'main.py',
-                content: code
+                type: 'wokwi:set-code',
+                code: code
             }, '*');
 
-            await delay(100);
+            // 2) เตรียมสคริปต์สำหรับบันทึกลง main.py และสั่งรัน
+            const saveAndRunScript = `with open('main.py', 'w') as f:\n    f.write(${JSON.stringify(code)})\n\nexec(open('main.py').read())\n`;
 
-            // 2) หยุดการทำงานชั่วคราว (Pause)
-            simIframe.contentWindow.postMessage({ type: 'wokwi:pause' }, '*');
-
-            await delay(200);
-
-            // 3) เล่นการจำลองต่อ (Play) เพื่อให้จำลองโหลดไฟล์ในความจำใหม่
-            simIframe.contentWindow.postMessage({ type: 'wokwi:play' }, '*');
-
-            await delay(200);
-
-            // 4) ส่งสัญญาณ Soft Reset (Ctrl+C แล้ว Ctrl+D) เข้า Virtual Serial เพื่อเริ่มรัน main.py
+            // 3) ส่ง Ctrl+C (\x03) 2 ครั้ง เพื่อหยุด Loop เก่าที่กำลังทำงานใน Wokwi
             simIframe.contentWindow.postMessage({
                 type: 'wokwi:serial-write',
-                data: "\x03\x03\x04"
+                data: "\x03\x03"
             }, '*');
 
-            alert("🚀 อัปเดตโค้ดลง main.py ใน Wokwi Simulator เรียบร้อยแล้ว!");
+            await delay(300);
+
+            // 4) ส่งเข้า Raw Paste Mode (\x05) -> โค้ดเขียนไฟล์ -> สั่งรัน (\x04)
+            simIframe.contentWindow.postMessage({
+                type: 'wokwi:serial-write',
+                data: "\x05" + saveAndRunScript + "\x04"
+            }, '*');
+
+            alert("🚀 อัปเดตและรัน main.py บน Wokwi Simulator เรียบร้อยแล้ว!");
         } else {
             alert("⚠️ ไม่พบส่วนแสดงผล Simulator");
         }
@@ -381,7 +379,6 @@ async function executeCode() {
         alert("⚠️ กรุณากดปุ่มเชื่อมต่อ USB หรือ บลูทูธ ก่อนทำการรันโค้ดครับ");
     }
 }
-
 function toggleMode() {
     isHardwareMode = !isHardwareMode;
     var modeBtn = document.getElementById('modeBtn');
