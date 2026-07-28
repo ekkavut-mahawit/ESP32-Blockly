@@ -305,20 +305,17 @@ async function executeCode() {
         var simIframe = document.getElementById('simFrame');
         if (simIframe && simIframe.contentWindow) {
             
-            // 1) สั่งอัปเดตโค้ดรวมใน Wokwi
-            simIframe.contentWindow.postMessage({
-                type: 'wokwi:set-code',
-                code: code
-            }, '*');
-
-            // 2) บังคับเขียนทับลงไฟล์ main.py โดยตรง
+            // 1) ส่งข้อมูลโค้ดไปยังไฟล์ main.py (แก้ใช้ path ตามมาตรฐาน Wokwi API)
             simIframe.contentWindow.postMessage({
                 type: 'wokwi:set-file',
-                name: 'main.py',
+                path: 'main.py',
                 content: code
             }, '*');
 
-            // 3) สั่งให้ Wokwi รีสตาร์ทการจำลองทันทีเพื่อรัน main.py ใหม่
+            // 2) หน่วงเวลา 150ms ให้ Wokwi เขียนไฟล์เสร็จก่อน
+            await delay(150);
+
+            // 3) สั่งให้ Wokwi Restart การทำงานใหม่ทันที
             simIframe.contentWindow.postMessage({
                 type: 'wokwi:restart'
             }, '*');
