@@ -284,10 +284,27 @@ async function executeCode() {
         return;
     }
 
+    // =======================================
+    // 0. การส่งโค้ดไปยัง Wokwi Simulator
+    // =======================================
     if (!isHardwareMode) {
-        var simFrame = document.getElementById('simFrame').contentWindow;
-        simFrame.postMessage({ type: 'wokwi:set-code', code: code }, '*');
-        alert('🚀 ส่งโค้ดไปยังตัวจำลองเรียบร้อยแล้ว!');
+        var simIframe = document.getElementById('simFrame');
+        if (simIframe && simIframe.contentWindow) {
+            // สั่งอัปเดตโค้ดลงไฟล์ main.py ใน Wokwi
+            simIframe.contentWindow.postMessage({
+                type: 'wokwi:set-code',
+                code: code
+            }, '*');
+
+            // สั่งให้ Wokwi รีสตาร์ทและรันโค้ดชุดใหม่ทันที
+            simIframe.contentWindow.postMessage({
+                type: 'wokwi:restart'
+            }, '*');
+
+            console.log("🚀 ส่งโค้ดไปยัง Wokwi Simulator เรียบร้อยแล้ว");
+        } else {
+            alert("⚠️ ไม่พบส่วนแสดงผล Simulator");
+        }
         return;
     }
 
