@@ -287,21 +287,27 @@ async function executeCode() {
     // =======================================
     // 0. การส่งโค้ดไปยัง Wokwi Simulator
     // =======================================
+    // =======================================
+    // 0. การส่งโค้ดไปยัง Wokwi Simulator
+    // =======================================
     if (!isHardwareMode) {
         var simIframe = document.getElementById('simFrame');
         if (simIframe && simIframe.contentWindow) {
-            // สั่งอัปเดตโค้ดลงไฟล์ main.py ใน Wokwi
+            // 1. ส่งโค้ด MicroPython เข้าไปวางใน Wokwi
             simIframe.contentWindow.postMessage({
                 type: 'wokwi:set-code',
                 code: code
             }, '*');
 
-            // สั่งให้ Wokwi รีสตาร์ทและรันโค้ดชุดใหม่ทันที
-            simIframe.contentWindow.postMessage({
-                type: 'wokwi:restart'
-            }, '*');
+            // 2. เว้นจังหวะ 100ms ให้ Wokwi เขียนไฟล์เสร็จ แล้วค่อยสั่ง Restart
+            setTimeout(function() {
+                simIframe.contentWindow.postMessage({
+                    type: 'wokwi:restart'
+                }, '*');
+            }, 100);
 
-            console.log("🚀 ส่งโค้ดไปยัง Wokwi Simulator เรียบร้อยแล้ว");
+            // 3. แจ้งเตือนบนหน้าจอเพื่อบอกผู้เรียนว่าส่งโค้ดเรียบร้อยแล้ว
+            alert("🚀 ส่งโค้ดไปยังตัวจำลอง (Simulator) เรียบร้อยแล้ว!");
         } else {
             alert("⚠️ ไม่พบส่วนแสดงผล Simulator");
         }
