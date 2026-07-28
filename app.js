@@ -192,7 +192,7 @@ Blockly.Python['oled_print'] = function(block) {
 
 
 // ======================================================
-// 2. ระบบเชื่อมต่อ & โหลด Workspace (แก้อาการบล็อกหาย)
+// 2. ระบบเชื่อมต่อ & โหลด Workspace (พร้อม Real-time Code Update)
 // ======================================================
 var workspace = null;
 var isHardwareMode = true; 
@@ -204,7 +204,7 @@ var rxCharacteristic = null;
 const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
 const NUS_RX_UUID      = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
 
-// ฟังก์ชันสร้าง Workspace ป้องกันปัญหา Race Condition
+// ฟังก์ชันสร้าง Workspace และผูก Listener อัปเดตโค้ดอัตโนมัติ
 function initBlockly() {
     if (workspace) return;
     
@@ -220,6 +220,10 @@ function initBlockly() {
         });
 
         Blockly.svgResize(workspace);
+
+        // 📌 ผูกอีเวนต์เปลี่ยนบล็อก -> อัปเดตช่องโค้ด Python ทันที
+        workspace.addChangeListener(updateCodeDisplay);
+        updateCodeDisplay();
     }
 }
 
@@ -228,6 +232,41 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initBlockly);
 } else {
     initBlockly();
+}
+
+// 🐍 ฟังก์ชันอัปเดตข้อความโค้ด Python ลงช่อง Textarea
+function updateCodeDisplay() {
+    if (!workspace) return;
+    var code = Blockly.Python.workspaceToCode(workspace);
+    var codeBox = document.getElementById('pythonCodeBox');
+    if (codeBox) {
+        codeBox.value = code.trim() ? code : "# ลากบล็อกมาวางเพื่อสร้างโค้ด Python...";
+    }
+}
+
+// 📋 ฟังก์ชันสำหรับกดปุ่มคัดลอกโค้ด
+function copyPythonCode() {
+    var codeBox = document.getElementById('pythonCodeBox');
+    if (!codeBox || !codeBox.value || codeBox.value.startsWith('#')) {
+        alert('⚠️ ยังไม่มีโค้ดให้คัดลอกครับ กรุณาลากบล็อกคำสั่งมาก่อน');
+        return;
+    }
+
+    navigator.clipboard.writeText(codeBox.value).then(() => {
+        var btn = document.getElementById('btnCopyCode');
+        var originalText = btn.innerText;
+        btn.innerText = "✅ คัดลอกแล้ว!";
+        btn.style.backgroundColor = "#16a34a";
+
+        setTimeout(() => {
+            btn.innerText = originalText;
+            btn.style.backgroundColor = "#28a745";
+        }, 2000);
+    }).catch(err => {
+        codeBox.select();
+        document.execCommand('copy');
+        alert("📋 คัดลอกโค้ดเรียบร้อยแล้ว!");
+    });
 }
 
 
@@ -299,46 +338,11 @@ async function executeCode() {
     }
 
     // --------------------------------------------------
-    // 0. โหมด Simulator (Wokwi) - เบรก Loop + เขียนไฟล์ + สั่ง exec
+    // 0. โหมด Simulator (Wokwi) - แจ้งเตือนให้คัดลอกโค้ด
     // --------------------------------------------------
     if (!isHardwareMode) {
-        var simIframe = document.getElementById('simFrame');
-        if (simIframe && simIframe.contentWindow) {
-
-            // 1) อัปเดตไฟล์ main.py ในระบบไฟล์จำลองของ Wokwi
-            simIframe.contentWindow.postMessage({
-                type: 'wokwi:set-file',
-                path: 'main.py',
-                content: code
-            }, '*');
-
-            // 2) ส่ง Ctrl+C (\x03) 2 ครั้ง เพื่อหยุดโปรแกรมที่กำลังทำงานค้างอยู่
-            simIframe.contentWindow.postMessage({
-                type: 'wokwi:serial-write',
-                data: "\x03\x03"
-            }, '*');
-
-            // หน่วงเวลาให้ MicroPython หลุดออกมาที่หน้าต่าง REPL (>>>)
-            await delay(300);
-
-            // 3) สั่ง REPL ให้รันไฟล์ main.py ฉบับใหม่ทันที
-            simIframe.contentWindow.postMessage({
-                type: 'wokwi:serial-write',
-                data: "exec(open('main.py').read())\r\n"
-            }, '*');
-
-            await delay(150);
-
-            // 4) ส่ง Ctrl+D (\x04) สั่ง Soft Reboot ให้ MicroPython บูต main.py ใหม่
-            simIframe.contentWindow.postMessage({
-                type: 'wokwi:serial-write',
-                data: "\x04"
-            }, '*');
-
-            alert("🚀 อัปเดตและรันโค้ดลง Wokwi Simulator เรียบร้อยแล้ว!");
-        } else {
-            alert("⚠️ ไม่พบส่วนแสดงผล Simulator");
-        }
+        copyPythonCode();
+        alert("📋 ระบบทำการคัดลอกโค้ดลง Clipboard ให้แล้ว!\n\nคุณครูสามารถกด Ctrl+A แล้ว Ctrl+V วางในไฟล์ main.py บนหน้าต่าง Wokwi ได้เลยครับ");
         return;
     }
 
@@ -386,6 +390,7 @@ async function executeCode() {
         alert("⚠️ กรุณากดปุ่มเชื่อมต่อ USB หรือ บลูทูธ ก่อนทำการรันโค้ดครับ");
     }
 }
+
 function toggleMode() {
     isHardwareMode = !isHardwareMode;
     var modeBtn = document.getElementById('modeBtn');
