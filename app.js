@@ -285,33 +285,69 @@ async function executeCode() {
     }
 
     // =======================================
-   // =======================================
-    // 0. การส่งโค้ดไปยัง Wokwi Simulator (Safe postMessage Mode)
+    // 0. การส่งโค้ดไปยัง Wokwi Simulator
     // =======================================
     if (!isHardwareMode) {
         var simIframe = document.getElementById('simFrame');
         if (simIframe && simIframe.contentWindow) {
-            
-            // ใช้โครงสร้างคำสั่งมาตรฐานที่ Wokwi รองรับ
-            var messageData = {
+            // ส่งเฉพาะโค้ดเข้าไปอย่างเดียว ไม่บังคับระบบ Wokwi รีสตาร์ท เพื่อป้องกันการแฮงก์
+            simIframe.contentWindow.postMessage({
                 type: 'wokwi:set-code',
                 code: code
-            };
+            }, '*');
 
-            try {
-                // ส่งโค้ดไปเงียบๆ (ไม่ต้องส่ง start/restart ตามไปกวนระบบ)
-                simIframe.contentWindow.postMessage(messageData, '*');
-                
-                alert("🚀 ส่งโค้ดไปยังตัวจำลองเรียบร้อยแล้ว!\n(หากเป็นการรันครั้งแรก อย่าลืมกดปุ่ม ▶️ สีเขียวในหน้า Wokwi ด้วยนะครับ)");
-            } catch (error) {
-                alert("❌ เกิดข้อผิดพลาดในการส่งข้อมูล: " + error);
-            }
-            
+            alert("🚀 ส่งโค้ดลง Simulator แล้ว!\n(หากจอยังมืด ให้กดปุ่ม Play สีเขียวในหน้า Wokwi 1 ครั้งครับ)");
         } else {
             alert("⚠️ ไม่พบส่วนแสดงผล Simulator");
         }
         return;
     }
+
+    // =======================================
+    // 1. การส่งโค้ดผ่านสาย USB (Web Serial)
+    // =======================================
+    if (connectionType === 'usb' && serialPort && serialPort.writable) {
+        try {
+            const encoder = new TextEncoder();
+            let writer = serialPort.writable.getWriter();
+            await writer.write(encoder.encode("\x03\x03"));
+            writer.releaseLock();
+
+            await delay(200);
+
+            writer = serialPort.writable.getWriter();
+            const formattedCode = "\x05" + code + "\x04";
+            await writer.write(encoder.encode(formattedCode));
+            writer.releaseLock();
+
+            alert("🚀 อัปเดตโค้ดใหม่ผ่าน USB สำเร็จ!");
+        } catch (err) {
+            alert("❌ ส่งโค้ดทาง USB ล้มเหลว: " + err);
+        }
+
+    // =======================================
+    // 2. การส่งโค้ดผ่าน บลูทูธ (Web BLE)
+    // =======================================
+    } else if (connectionType === 'ble' && rxCharacteristic) {
+        try {
+            const encoder = new TextEncoder();
+            const formattedCode = "\x03\x03\x05" + code + "\x04";
+            const data = encoder.encode(formattedCode);
+
+            const chunkSize = 20;
+            for (let i = 0; i < data.length; i += chunkSize) {
+                const chunk = data.slice(i, i + chunkSize);
+                await rxCharacteristic.writeValue(chunk);
+                await delay(20); 
+            }
+            alert("🚀 อัปเดตโค้ดใหม่ผ่าน Bluetooth สำเร็จ!");
+        } catch (err) {
+            alert("❌ ส่งโค้ดทาง Bluetooth ล้มเหลว: " + err);
+        }
+    } else {
+        alert("⚠️ กรุณากดปุ่มเชื่อมต่อ USB หรือ บลูทูธ ก่อนทำการรันโค้ดครับ");
+    }
+}
 
     // =======================================
     // 1. การส่งโค้ดผ่านสาย USB (Web Serial)
