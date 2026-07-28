@@ -299,28 +299,38 @@ async function executeCode() {
     }
 
     // --------------------------------------------------
-    // 0. โหมด Simulator (Wokwi) - อัปเดต main.py และสั่งรันใหม่
+    // 0. โหมด Simulator (Wokwi) - เขียน main.py & Soft Reset
     // --------------------------------------------------
     if (!isHardwareMode) {
         var simIframe = document.getElementById('simFrame');
         if (simIframe && simIframe.contentWindow) {
             
-            // 1) ส่งข้อมูลโค้ดไปยังไฟล์ main.py (แก้ใช้ path ตามมาตรฐาน Wokwi API)
+            // 1) สั่งเขียนทับไฟล์ main.py
             simIframe.contentWindow.postMessage({
                 type: 'wokwi:set-file',
                 path: 'main.py',
                 content: code
             }, '*');
 
-            // 2) หน่วงเวลา 150ms ให้ Wokwi เขียนไฟล์เสร็จก่อน
-            await delay(150);
+            await delay(100);
 
-            // 3) สั่งให้ Wokwi Restart การทำงานใหม่ทันที
+            // 2) หยุดการทำงานชั่วคราว (Pause)
+            simIframe.contentWindow.postMessage({ type: 'wokwi:pause' }, '*');
+
+            await delay(200);
+
+            // 3) เล่นการจำลองต่อ (Play) เพื่อให้จำลองโหลดไฟล์ในความจำใหม่
+            simIframe.contentWindow.postMessage({ type: 'wokwi:play' }, '*');
+
+            await delay(200);
+
+            // 4) ส่งสัญญาณ Soft Reset (Ctrl+C แล้ว Ctrl+D) เข้า Virtual Serial เพื่อเริ่มรัน main.py
             simIframe.contentWindow.postMessage({
-                type: 'wokwi:restart'
+                type: 'wokwi:serial-write',
+                data: "\x03\x03\x04"
             }, '*');
 
-            alert("🚀 อัปเดต main.py ลง Wokwi Simulator เรียบร้อยแล้ว!");
+            alert("🚀 อัปเดตโค้ดลง main.py ใน Wokwi Simulator เรียบร้อยแล้ว!");
         } else {
             alert("⚠️ ไม่พบส่วนแสดงผล Simulator");
         }
