@@ -1,180 +1,249 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ESP32-C3 Wireless Block Coding</title>
-  
-  <!-- 📌 ล็อกเวอร์ชัน 9.3.3 เพื่อป้องกันโครงสร้าง Generator เปลี่ยนเอง -->
-  <script src="https://unpkg.com/blockly@9.3.3/blockly.min.js"></script>
-  <script src="https://unpkg.com/blockly@9.3.3/python_compressed.js"></script>
-  
-  <style>
-    body { font-family: 'Segoe UI', Tahoma, sans-serif; padding: 15px; background-color: #f4f6f9; margin: 0; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ESP32-C3 Block Coding - โรงเรียนมหาชนะชัยวิทยาคม</title>
     
-    /* ==========================================
-       ส่วนที่ 1: Header โรงเรียน
-       ========================================== */
-    .school-header {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      background: white;
-      padding: 15px 20px;
-      border-radius: 8px;
-      margin-bottom: 12px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
+    <!-- 📌 ล็อกเวอร์ชัน 9.3.3 เพื่อเสถียรภาพของโครงสร้าง Generator -->
+    <script src="https://unpkg.com/blockly@9.3.3/blockly.min.js"></script>
+    <script src="https://unpkg.com/blockly@9.3.3/blocks_compressed.js"></script>
+    <script src="https://unpkg.com/blockly@9.3.3/python_compressed.js"></script>
+    <script src="https://unpkg.com/blockly@9.3.3/msg/th.js"></script>
 
-    .school-logo {
-      width: 120px;
-      height: auto;
-      object-fit: contain;
-    }
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, 'Sarabun', sans-serif; 
+            display: flex; flex-direction: column; height: 100vh; overflow: hidden; 
+            background-color: #f4f6f9; 
+        }
+        
+        /* ==========================================
+           ส่วนที่ 1: Header โรงเรียน & ชื่อครูผู้สอน
+           ========================================== */
+        header { 
+            background: #ffffff; color: #1a252f; 
+            padding: clamp(8px, 1.2vh, 12px) clamp(12px, 2vw, 20px); 
+            display: flex; justify-content: space-between; align-items: center; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08); z-index: 10; flex-wrap: wrap; gap: 10px;
+            border-bottom: 3px solid #007bff;
+        }
 
-    .header-info {
-      display: flex;
-      flex-direction: column;
-    }
+        .school-header {
+            display: flex;
+            align-items: center;
+            gap: clamp(10px, 1.5vw, 15px);
+        }
 
-    .school-name {
-      font-size: 24px;
-      font-weight: bold;
-      color: #1a252f;
-      margin: 0;
-    }
+        .school-logo {
+            width: clamp(42px, 5vw, 60px);
+            height: auto;
+            object-fit: contain;
+        }
 
-    .teacher-name {
-      font-size: 18px;
-      color: #555555;
-      margin: 3px 0 0 0;
-    }
+        .header-info {
+            display: flex;
+            flex-direction: column;
+        }
 
-    .app-title {
-      font-size: 17px;
-      font-weight: bold;
-      color: #007bff;
-      margin: 5px 0 0 0;
-    }
+        .school-name { 
+            font-size: clamp(1rem, 2vw, 1.35rem); 
+            font-weight: bold; 
+            color: #1a252f;
+            line-height: 1.2;
+        }
 
-    /* ==========================================
-       ส่วนที่ 2: ปุ่มควบคุม และพื้นที่ Blockly
-       ========================================== */
-    .control-panel { 
-      background: white; 
-      padding: 10px 15px; 
-      border-radius: 8px; 
-      margin-bottom: 12px; 
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
-      display: flex; 
-      align-items: center; 
-      gap: 10px; 
-      flex-wrap: wrap; 
-    }
-    input[type="text"] { padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; width: 130px; }
-    button { padding: 10px 20px; font-size: 15px; font-weight: bold; cursor: pointer; border-radius: 6px; border: none; }
-    .btn-run { background-color: #28a745; color: white; flex-grow: 1; }
-    .btn-run:hover { background-color: #218838; }
-    
-    /* touch-action: none ป้องกันจอมือถือเลื่อนสู้กับการลากวางบล็อก */
-    #blocklyDiv { 
-      height: 500px; 
-      width: 100%; 
-      border-radius: 8px; 
-      border: 1px solid #ccc; 
-      background-color: #ffffff;
-      touch-action: none;
-    }
-  </style>
+        .teacher-name {
+            font-size: clamp(0.75rem, 1.2vw, 0.95rem);
+            color: #555555;
+            margin-top: 2px;
+        }
+
+        .app-title {
+            font-size: clamp(0.7rem, 1.1vw, 0.88rem);
+            font-weight: bold;
+            color: #007bff;
+            margin-top: 1px;
+        }
+
+        /* ==========================================
+           ส่วนที่ 2: ปุ่มควบคุมระบบ Hybrid (USB / BLE / SIM)
+           ========================================== */
+        .controls { 
+            display: flex; 
+            gap: clamp(4px, 1vw, 8px); 
+            align-items: center; 
+            flex-wrap: wrap; 
+        }
+
+        .btn { 
+            padding: clamp(6px, 1vh, 10px) clamp(10px, 1.2vw, 16px); 
+            border: none; border-radius: 6px; 
+            font-weight: bold; 
+            font-size: clamp(0.75rem, 1.1vw, 0.9rem); 
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .btn:active { transform: scale(0.96); }
+        .btn-usb { background-color: #0284c7; color: white; }
+        .btn-ble { background-color: #9333ea; color: white; }
+        .btn-toggle { background-color: #f59e0b; color: white; }
+        .btn-run { background-color: #28a745; color: white; }
+        .btn-run:hover { background-color: #218838; }
+
+        /* ==========================================
+           ส่วนที่ 3: พื้นที่ทำงาน (Workspace & Simulator)
+           ========================================== */
+        .main-container { 
+            display: flex; 
+            flex: 1; 
+            width: 100%; 
+            height: calc(100vh - 75px); 
+            position: relative; 
+        }
+
+        /* touch-action: none ป้องกันจอมือถือเลื่อนสู้กับการลากวางบล็อก */
+        #blocklyDiv { 
+            flex: 1; 
+            height: 100%; 
+            touch-action: none; 
+            background-color: #ffffff;
+        }
+        
+        #simContainer { 
+            width: 45%; 
+            height: 100%; 
+            border-left: 3px solid #cbd5e1; 
+            display: flex; 
+            flex-direction: column; 
+            background: #1e293b;
+        }
+        #simFrame { width: 100%; flex: 1; border: none; }
+
+        @media (max-width: 600px) {
+            header { padding: 8px; }
+            .controls { width: 100%; justify-content: space-between; }
+            .btn { flex: 1; text-align: center; padding: 6px 4px; }
+        }
+    </style>
 </head>
 <body>
 
-  <!-- 🏫 ส่วนหัวเว็บ (School Header) -->
-  <div class="school-header">
-    <img src="logo.png" alt="โลโก้โรงเรียน" class="school-logo" onerror="this.src='https://ekkavut-mahawit.github.io/ESP32-Blockly/logo.png'">
-    
-    <div class="header-info">
-      <div class="school-name">โรงเรียนมหาชนะชัยวิทยาคม</div>
-      <div class="teacher-name">ครูผู้สอน: ครูเอกวัฒน์ ทาศรีภู</div>
-      <div class="app-title">📱 ระบบเรียนรู้ ESP32-C3 Block Coding (ไร้สาย)</div>
+    <!-- 🏫 ส่วนหัวแสดงโลโก้ ชื่อโรงเรียน และครูผู้สอน -->
+    <header>
+        <div class="school-header">
+            <img src="logo.png" alt="โลโก้โรงเรียน" class="school-logo" onerror="this.src='https://ekkavut-mahawit.github.io/ESP32-Blockly/logo.png'">
+            <div class="header-info">
+                <div class="school-name">โรงเรียนมหาชนะชัยวิทยาคม</div>
+                <div class="teacher-name">ครูผู้สอน: ครูเอกวัฒน์ ทาศรีภู</div>
+                <div class="app-title">📱 ระบบเรียนรู้ ESP32-C3 Block Coding (Hybrid BLE/USB)</div>
+            </div>
+        </div>
+
+        <!-- 🔌 แผงปุ่มควบคุมการเชื่อมต่อไร้สาย/สายสัญญาณ -->
+        <div class="controls">
+            <button class="btn btn-usb" id="usbBtn" onclick="connectUSB()">🔌 เสียบสาย USB</button>
+            <button class="btn btn-ble" id="bleBtn" onclick="connectBLE()">📶 บลูทูธ (BLE)</button>
+            <button class="btn btn-toggle" id="modeBtn" onclick="toggleMode()">🔄 โหมด: บอร์ดจริง</button>
+            <button class="btn btn-run" id="run-btn" onclick="executeCode()">🚀 ส่งโค้ด (Run)</button>
+        </div>
+    </header>
+
+    <!-- 🧩 พื้นที่วางบล็อก + Wokwi Simulator -->
+    <div class="main-container">
+        <div id="blocklyDiv"></div>
+
+        <div id="simContainer" style="display: none;">
+            <iframe id="simFrame" src="https://wokwi.com/projects/new/esp32"></iframe>
+        </div>
     </div>
-  </div>
 
-  <!-- 🔌 แผงควบคุม IP และปุ่มส่งโค้ด -->
-  <div class="control-panel">
-    <label><b>IP บอร์ด:</b></label>
-    <input type="text" id="board-ip" value="192.168.4.1">
-    <button id="run-btn" class="btn-run" onclick="runCode()">🚀 ส่งโค้ดไร้สาย (Run)</button>
-  </div>
+    <!-- 📦 รายการบล็อกคำสั่ง (Toolbox ครบทุกหมวดหมู่) -->
+    <xml id="toolbox" style="display: none">
+        
+        <!-- หมวดที่ 1: พื้นฐาน, เสียง & เวลา -->
+        <category name="1. พื้นฐาน & เวลา" colour="#5b80a5">
+            <block type="time_delay"></block>
+            <block type="digital_write"></block>
+            <block type="play_buzzer"></block>
+        </category>
 
-  <!-- 🧩 พื้นที่วางบล็อก -->
-  <div id="blocklyDiv"></div>
+        <!-- หมวดที่ 2: เซนเซอร์ -->
+        <category name="2. เซนเซอร์" colour="#a5805b">
+            <block type="analog_read"></block>
+            <block type="digital_read"></block>
+            <block type="line_sensor_read"></block>
+        </category>
 
-  <!-- 📦 รายการบล็อกคำสั่ง (Toolbox) -->
-  <xml id="toolbox" style="display: none">
-    
-    <!-- หมวดที่ 1: พื้นฐาน & เสียง -->
-    <category name="1. พื้นฐาน & เสียง" colour="#5b80a5">
-      <block type="set_led"></block>
-      <block type="digital_write"></block>
-      <block type="play_buzzer"></block>
-      <block type="set_servo"></block>
-      <block type="delay_time"></block>
-    </category>
+        <!-- หมวดที่ 3: มอเตอร์ & เซอร์โว -->
+        <category name="3. มอเตอร์ & เซอร์โว" colour="#a55b80">
+            <block type="servo_move"></block>
+        </category>
 
-    <!-- หมวดที่ 2: เซนเซอร์อนาล็อก -->
-    <category name="2. เซนเซอร์อนาล็อก" colour="#a5805b">
-      <block type="analog_read"></block>
-      <block type="digital_read"></block>
-    </category>
+        <!-- หมวดที่ 4: แสดงผล RGB & OLED -->
+        <category name="4. จอภาพ & RGB" colour="#5ba585">
+            <block type="set_neopixel"></block>
+            <block type="oled_print"></block>
+        </category>
 
-    <!-- หมวดที่ 3: ไฟ RGB NeoPixel -->
-    <category name="3. ไฟ RGB NeoPixel" colour="#a55b80">
-      <block type="set_neopixel"></block>
-    </category>
+        <sep></sep> <!-- เส้นแบ่งหมวดหมู่ -->
 
-    <!-- หมวดที่ 4: คณิตศาสตร์ (เพิ่มใหม่) -->
-    <category name="4. คณิตศาสตร์" colour="#5b67a5">
-      <block type="math_number">
-        <field name="NUM">0</field>
-      </block>
-      <block type="math_arithmetic">
-        <value name="A">
-          <shadow type="math_number"><field name="NUM">1</field></shadow>
-        </value>
-        <value name="B">
-          <shadow type="math_number"><field name="NUM">1</field></shadow>
-        </value>
-      </block>
-    </category>
+        <!-- หมวดที่ 5: ตรรกศาสตร์ & เปรียบเทียบ -->
+        <category name="5. ตรรกศาสตร์ & เปรียบเทียบ" colour="#337ab7">
+            <block type="controls_if"></block>
+            <block type="logic_compare">
+                <value name="A">
+                    <shadow type="math_number"><field name="NUM">0</field></shadow>
+                </value>
+                <value name="B">
+                    <shadow type="math_number"><field name="NUM">0</field></shadow>
+                </value>
+            </block>
+            <block type="logic_operation"></block>
+            <block type="logic_negate"></block>
+            <block type="logic_boolean"></block>
+        </category>
 
-    <!-- หมวดที่ 5: ตรรกศาสตร์ & การเปรียบเทียบ (เพิ่มใหม่: มากกว่า, น้อยกว่า, เท่ากับ ฯลฯ) -->
-    <category name="5. ตรรกศาสตร์ & เปรียบเทียบ" colour="#337ab7">
-      <block type="logic_compare">
-        <value name="A">
-          <shadow type="math_number"><field name="NUM">0</field></shadow>
-        </value>
-        <value name="B">
-          <shadow type="math_number"><field name="NUM">0</field></shadow>
-        </value>
-      </block>
-      <block type="logic_operation"></block>
-      <block type="logic_negate"></block>
-      <block type="logic_boolean"></block>
-    </category>
+        <!-- หมวดที่ 6: ลูปทำซ้ำ -->
+        <category name="6. ลูป (Loops)" colour="#5ba55b">
+            <block type="controls_repeat_ext">
+                <value name="TIMES">
+                    <shadow type="math_number"><field name="NUM">5</field></shadow>
+                </value>
+            </block>
+            <block type="controls_whileUntil"></block>
+        </category>
 
-    <!-- หมวดที่ 6: ลูป & เงื่อนไข -->
-    <category name="6. ลูป & เงื่อนไข" colour="#5ba55b">
-      <block type="controls_repeat_ext">
-        <value name="TIMES">
-          <shadow type="math_number"><field name="NUM">5</field></shadow>
-        </value>
-      </block>
-      <block type="controls_if"></block>
-    </category>
+        <!-- หมวดที่ 7: คณิตศาสตร์ -->
+        <category name="7. คณิตศาสตร์" colour="#5b67a5">
+            <block type="math_number"><field name="NUM">0</field></block>
+            <block type="math_arithmetic">
+                <value name="A">
+                    <shadow type="math_number"><field name="NUM">1</field></shadow>
+                </value>
+                <value name="B">
+                    <shadow type="math_number"><field name="NUM">1</field></shadow>
+                </value>
+            </block>
+            <block type="math_random_int">
+                <value name="FROM">
+                    <shadow type="math_number"><field name="NUM">1</field></shadow>
+                </value>
+                <value name="TO">
+                    <shadow type="math_number"><field name="NUM">100</field></shadow>
+                </value>
+            </block>
+            <block type="math_round"></block>
+        </category>
 
-  </xml>
+        <!-- หมวดที่ 8: ตัวแปร (จัดการอัตโนมัติ) -->
+        <category name="8. ตัวแปร" colour="#a55ba5" custom="VARIABLE"></category>
 
-  <script src="app.js"></script>
+    </xml>
+
+    <script src="app.js"></script>
 </body>
 </html>
