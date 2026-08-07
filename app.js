@@ -69,7 +69,23 @@ Blockly.Python['play_buzzer'] = function(block) {
   return code;
 };
 
-// 1.4 บล็อกอ่านค่าอนาล็อก (Analog Read / ADC)
+// 1.4 บล็อกอ่านค่าปุ่ม BOOT บนบอร์ด (ขา 9) - Pull-Up Active LOW
+Blockly.Blocks['boot_button_read'] = {
+  init: function() {
+    this.appendDummyInput()
+        .appendField("อ่านค่าปุ่ม BOOT (ขา 9)");
+    this.setOutput(true, "Number");
+    this.setColour(45);
+    this.setTooltip("กดปุ่ม = 0, ไม่กด = 1 (Active LOW)");
+  }
+};
+Blockly.Python['boot_button_read'] = function(block) {
+  Blockly.Python.definitions_['import_pin'] = 'from machine import Pin';
+  Blockly.Python.definitions_['btn_boot'] = 'btn_boot = Pin(9, Pin.IN, Pin.PULL_UP)';
+  return ['btn_boot.value()', Blockly.Python.ORDER_ATOMIC];
+};
+
+// 1.5 บล็อกอ่านค่าอนาล็อก (Analog Read / ADC)
 Blockly.Blocks['analog_read'] = {
   init: function() {
     this.appendDummyInput()
@@ -86,7 +102,7 @@ Blockly.Python['analog_read'] = function(block) {
   return ['adc_' + pin + '.read()', Blockly.Python.ORDER_ATOMIC];
 };
 
-// 1.5 บล็อกอ่านค่าดิจิทัล / ปุ่มกด (Digital Read)
+// 1.6 บล็อกอ่านค่าดิจิทัล / ปุ่มกด (Digital Read)
 Blockly.Blocks['digital_read'] = {
   init: function() {
     this.appendDummyInput()
@@ -103,7 +119,7 @@ Blockly.Python['digital_read'] = function(block) {
   return ['in_pin_' + pin + '.value()', Blockly.Python.ORDER_ATOMIC];
 };
 
-// 1.6 บล็อกอ่านค่าเซนเซอร์จับเส้น (Line Sensor)
+// 1.7 บล็อกอ่านค่าเซนเซอร์จับเส้น (Line Sensor)
 Blockly.Blocks['line_sensor_read'] = {
   init: function() {
     this.appendDummyInput()
@@ -120,7 +136,7 @@ Blockly.Python['line_sensor_read'] = function(block) {
   return ['sensor_' + pin + '.value()', Blockly.Python.ORDER_ATOMIC];
 };
 
-// 1.7 บล็อกหมุนเซอร์โว (Servo Move)
+// 1.8 บล็อกหมุนเซอร์โว (Servo Move)
 Blockly.Blocks['servo_move'] = {
   init: function() {
     this.appendDummyInput()
@@ -143,7 +159,7 @@ Blockly.Python['servo_move'] = function(block) {
   return 'servo_' + pin + '.duty(' + duty + ')\n';
 };
 
-// 1.8 บล็อกไฟ RGB NeoPixel
+// 1.9 บล็อกไฟ RGB NeoPixel
 Blockly.Blocks['set_neopixel'] = {
   init: function() {
     this.appendDummyInput()
@@ -173,7 +189,7 @@ Blockly.Python['set_neopixel'] = function(block) {
   return 'np_' + pin + '[' + num + '] = (' + r + ', ' + g + ', ' + b + ')\nnp_' + pin + '.write()\n';
 };
 
-// 1.9 บล็อกแสดงผลจอ OLED (ESP32-C3: SCL=7, SDA=6)
+// 1.10 บล็อกแสดงผลจอ OLED (ESP32-C3: SCL=7, SDA=6)
 Blockly.Blocks['oled_print'] = {
   init: function() {
     this.appendDummyInput()
@@ -190,25 +206,8 @@ Blockly.Python['oled_print'] = function(block) {
   return 'oled.fill(0)\noled.text("' + text + '", 0, 0)\noled.show()\n';
 };
 
-// 1.10 บล็อกอ่านค่าปุ่ม BOOT บนบอร์ด (ขา 9)
-Blockly.Blocks['boot_button_read'] = {
-  init: function() {
-    this.appendDummyInput()
-        .appendField("อ่านค่าปุ่ม BOOT (ขา 9)");
-    this.setOutput(true, "Number");
-    this.setColour(45);
-    this.setTooltip("กดปุ่ม = 0, ไม่กด = 1 (Active LOW)");
-  }
-};
-
-Blockly.Python['boot_button_read'] = function(block) {
-  Blockly.Python.definitions_['import_pin'] = 'from machine import Pin';
-  Blockly.Python.definitions_['btn_boot'] = 'btn_boot = Pin(9, Pin.IN, Pin.PULL_UP)';
-  return ['btn_boot.value()', Blockly.Python.ORDER_ATOMIC];
-};
-
 // ======================================================
-// 2. ระบบเชื่อมต่อ & โหลด Workspace (พร้อม Real-time Code Update)
+// 2. ระบบเชื่อมต่อ & โหลด Workspace
 // ======================================================
 var workspace = null;
 var isHardwareMode = true; 
@@ -220,7 +219,6 @@ var rxCharacteristic = null;
 const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
 const NUS_RX_UUID      = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
 
-// ฟังก์ชันสร้าง Workspace และผูก Listener อัปเดตโค้ดอัตโนมัติ
 function initBlockly() {
     if (workspace) return;
     
@@ -237,20 +235,17 @@ function initBlockly() {
 
         Blockly.svgResize(workspace);
 
-        // 📌 ผูกอีเวนต์เปลี่ยนบล็อก -> อัปเดตช่องโค้ด Python ทันที
         workspace.addChangeListener(updateCodeDisplay);
         updateCodeDisplay();
     }
 }
 
-// ตรวจสอบความพร้อมของ DOM ก่อนฉีด Blockly
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initBlockly);
 } else {
     initBlockly();
 }
 
-// 🐍 ฟังก์ชันอัปเดตข้อความโค้ด Python ลงช่อง Textarea
 function updateCodeDisplay() {
     if (!workspace) return;
     var code = Blockly.Python.workspaceToCode(workspace);
@@ -260,7 +255,6 @@ function updateCodeDisplay() {
     }
 }
 
-// 📋 ฟังก์ชันสำหรับกดปุ่มคัดลอกโค้ด
 function copyPythonCode() {
     var codeBox = document.getElementById('pythonCodeBox');
     if (!codeBox || !codeBox.value || codeBox.value.startsWith('#')) {
@@ -284,7 +278,6 @@ function copyPythonCode() {
         alert("📋 คัดลอกโค้ดเรียบร้อยแล้ว!");
     });
 }
-
 
 // ======================================================
 // 3. ฟังก์ชันการเชื่อมต่อ USB / BLE / Execution
@@ -353,18 +346,12 @@ async function executeCode() {
         return;
     }
 
-    // --------------------------------------------------
-    // 0. โหมด Simulator (Wokwi) - แจ้งเตือนให้คัดลอกโค้ด
-    // --------------------------------------------------
     if (!isHardwareMode) {
         copyPythonCode();
         alert("📋 ระบบทำการคัดลอกโค้ดลง Clipboard ให้แล้ว!\n\nกด Ctrl+A แล้ว Ctrl+V วางในไฟล์ main.py บนหน้าต่าง Wokwi ได้เลยครับ");
         return;
     }
 
-    // --------------------------------------------------
-    // 1. โหมดบอร์ดจริง (Hardware) - USB & Bluetooth
-    // --------------------------------------------------
     var saveAndRunScript = `with open('main.py', 'w') as f:\n    f.write(${JSON.stringify(code)})\n\nexec(open('main.py').read())\n`;
 
     if (connectionType === 'usb' && serialPort && serialPort.writable) {
