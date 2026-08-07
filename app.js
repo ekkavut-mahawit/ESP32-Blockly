@@ -190,6 +190,22 @@ Blockly.Python['oled_print'] = function(block) {
   return 'oled.fill(0)\noled.text("' + text + '", 0, 0)\noled.show()\n';
 };
 
+// 1.10 บล็อกอ่านค่าปุ่ม BOOT บนบอร์ด (ขา 9)
+Blockly.Blocks['boot_button_read'] = {
+  init: function() {
+    this.appendDummyInput()
+        .appendField("อ่านค่าปุ่ม BOOT (ขา 9)");
+    this.setOutput(true, "Number");
+    this.setColour(45);
+    this.setTooltip("กดปุ่ม = 0, ไม่กด = 1 (Active LOW)");
+  }
+};
+
+Blockly.Python['boot_button_read'] = function(block) {
+  Blockly.Python.definitions_['import_pin'] = 'from machine import Pin';
+  Blockly.Python.definitions_['btn_boot'] = 'btn_boot = Pin(9, Pin.IN, Pin.PULL_UP)';
+  return ['btn_boot.value()', Blockly.Python.ORDER_ATOMIC];
+};
 
 // ======================================================
 // 2. ระบบเชื่อมต่อ & โหลด Workspace (พร้อม Real-time Code Update)
