@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ESP32-C3 Block Coding - โรงเรียนมหาชนะชัยวิทยาคม</title>
     
     <!-- 📌 ล็อกเวอร์ชัน 9.3.3 เพื่อเสถียรภาพของโครงสร้าง Generator -->
@@ -13,29 +13,36 @@
 
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { 
+        
+        html, body { 
             font-family: 'Segoe UI', Tahoma, 'Sarabun', sans-serif; 
-            display: flex; flex-direction: column; height: 100vh; overflow: hidden; 
+            width: 100%;
+            height: 100%;
+            height: 100dvh; /* รองรับ Dynamic Viewport ของเบราว์เซอร์มือถือ */
+            overflow: hidden; 
             background-color: #f4f6f9; 
+            display: flex;
+            flex-direction: column;
         }
         
         /* Header & Navigation */
         header { 
             background: #ffffff; color: #1a252f; 
-            padding: clamp(8px, 1.2vh, 12px) clamp(12px, 2vw, 20px); 
+            padding: clamp(6px, 1vh, 10px) clamp(8px, 1.5vw, 16px); 
             display: flex; justify-content: space-between; align-items: center; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.08); z-index: 10; flex-wrap: wrap; gap: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08); z-index: 10; flex-wrap: wrap; gap: 8px;
             border-bottom: 3px solid #007bff;
+            flex-shrink: 0;
         }
 
         .school-header {
             display: flex;
             align-items: center;
-            gap: clamp(10px, 1.5vw, 15px);
+            gap: clamp(8px, 1.2vw, 12px);
         }
 
         .school-logo {
-            width: clamp(42px, 5vw, 60px);
+            width: clamp(32px, 4vw, 50px);
             height: auto;
             object-fit: contain;
         }
@@ -46,20 +53,20 @@
         }
 
         .school-name { 
-            font-size: clamp(1rem, 2vw, 1.35rem); 
+            font-size: clamp(0.85rem, 1.5vw, 1.2rem); 
             font-weight: bold; 
             color: #1a252f;
             line-height: 1.2;
         }
 
         .teacher-name {
-            font-size: clamp(0.75rem, 1.2vw, 0.95rem);
+            font-size: clamp(0.7rem, 1vw, 0.85rem);
             color: #555555;
-            margin-top: 2px;
+            margin-top: 1px;
         }
 
         .app-title {
-            font-size: clamp(0.7rem, 1.1vw, 0.88rem);
+            font-size: clamp(0.65rem, 0.9vw, 0.8rem);
             font-weight: bold;
             color: #007bff;
             margin-top: 1px;
@@ -68,22 +75,23 @@
         /* Control Panel */
         .controls { 
             display: flex; 
-            gap: clamp(4px, 1vw, 8px); 
+            gap: clamp(4px, 0.8vw, 6px); 
             align-items: center; 
             flex-wrap: wrap; 
         }
 
         .btn { 
-            padding: clamp(6px, 1vh, 10px) clamp(10px, 1.2vw, 16px); 
+            padding: clamp(5px, 0.8vh, 8px) clamp(8px, 1vw, 14px); 
             border: none; border-radius: 6px; 
             font-weight: bold; 
-            font-size: clamp(0.75rem, 1.1vw, 0.9rem); 
+            font-size: clamp(0.7rem, 0.9vw, 0.85rem); 
             cursor: pointer; 
             transition: all 0.2s ease; 
             white-space: nowrap;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            touch-action: manipulation;
         }
-        .btn:active { transform: scale(0.96); }
+        .btn:active { transform: scale(0.95); }
         .btn-usb { background-color: #0284c7; color: white; }
         .btn-ble { background-color: #9333ea; color: white; }
         .btn-toggle { background-color: #f59e0b; color: white; }
@@ -95,7 +103,7 @@
             display: flex; 
             flex: 1; 
             width: 100%; 
-            height: calc(100vh - 75px); 
+            min-height: 0; /* ป้องกัน Flexbox ดันความสูงล้นจอ */
             position: relative; 
         }
 
@@ -104,35 +112,39 @@
             flex-direction: column;
             flex: 1;
             height: 100%;
+            min-height: 0;
         }
 
         #blocklyDiv { 
             flex: 1; 
             width: 100%; 
+            height: 100%;
+            min-height: 0;
             touch-action: none; 
             background-color: #ffffff;
         }
 
         /* 🐍 Python Code Panel */
         #codePanel {
-            height: 180px;
+            height: 140px;
             background: #1e1e1e;
             border-top: 2px solid #007bff;
             display: flex;
             flex-direction: column;
-            padding: 8px 12px;
+            padding: 6px 10px;
+            flex-shrink: 0;
         }
 
         .code-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
 
         .code-title {
             color: #569cd6;
-            font-size: 0.85rem;
+            font-size: 0.78rem;
             font-weight: bold;
             font-family: monospace;
         }
@@ -141,9 +153,9 @@
             background-color: #28a745;
             color: white;
             border: none;
-            padding: 4px 10px;
+            padding: 3px 8px;
             border-radius: 4px;
-            font-size: 0.8rem;
+            font-size: 0.72rem;
             font-weight: bold;
             cursor: pointer;
             transition: background 0.2s;
@@ -158,9 +170,9 @@
             color: #00ff66;
             border: 1px solid #333;
             border-radius: 4px;
-            padding: 8px;
+            padding: 6px;
             font-family: 'Consolas', 'Courier New', monospace;
-            font-size: 0.85rem;
+            font-size: 0.78rem;
             resize: none;
             outline: none;
             white-space: pre;
@@ -176,11 +188,62 @@
         }
         #simFrame { width: 100%; flex: 1; border: none; }
 
-        @media (max-width: 600px) {
-            header { padding: 8px; }
-            .controls { width: 100%; justify-content: space-between; }
-            .btn { flex: 1; text-align: center; padding: 6px 4px; }
-            #codePanel { height: 140px; }
+        /* 📱 Mobile Responsive Options */
+        
+        /* 1. สมาร์ตโฟนแนวตั้ง (Portrait) */
+        @media (max-width: 600px) and (orientation: portrait) {
+            header {
+                padding: 6px 8px;
+            }
+            .teacher-name, .app-title { display: none; } /* ซ่อนข้อความย่อยเพื่อเพิ่มพื้นที่แสดงผล */
+            .school-name { font-size: 0.95rem; }
+            .controls { 
+                width: 100%; 
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 4px;
+            }
+            .btn { 
+                padding: 6px 2px; 
+                font-size: 0.68rem; 
+                text-align: center;
+                border-radius: 4px;
+            }
+            #codePanel { 
+                height: 110px; 
+                padding: 4px 6px;
+            }
+            #simContainer {
+                width: 100%;
+                height: 50%;
+                position: absolute;
+                bottom: 0;
+                z-index: 20;
+                border-left: none;
+                border-top: 3px solid #cbd5e1;
+            }
+        }
+
+        /* 2. สมาร์ตโฟนแนวนอน (Landscape) */
+        @media (orientation: landscape) and (max-height: 500px) {
+            header {
+                padding: 4px 8px;
+                gap: 6px;
+            }
+            .teacher-name, .app-title { display: none; }
+            .school-logo { width: 26px; }
+            .school-name { font-size: 0.85rem; }
+            .controls { gap: 4px; }
+            .btn {
+                padding: 3px 8px;
+                font-size: 0.68rem;
+            }
+            #codePanel {
+                height: 80px; /* ลดความสูงกล่องโค้ดแนวนอนเพื่อเพิ่มพื้นที่ Blockly */
+                padding: 4px;
+            }
+            .code-title { font-size: 0.7rem; }
+            #pythonCodeBox { font-size: 0.7rem; padding: 4px; }
         }
     </style>
 </head>
@@ -313,5 +376,20 @@
     </xml>
 
     <script src="app.js?v=1.4"></script>
+    <script>
+        // ปรับขนาด Blockly อัตโนมัติเมื่อหมุนหน้าจอโทรศัพท์ (Portrait <-> Landscape)
+        window.addEventListener('resize', function() {
+            if (typeof workspace !== 'undefined' && workspace) {
+                Blockly.svgResize(workspace);
+            }
+        });
+        window.addEventListener('orientationchange', function() {
+            setTimeout(function() {
+                if (typeof workspace !== 'undefined' && workspace) {
+                    Blockly.svgResize(workspace);
+                }
+            }, 200);
+        });
+    </script>
 </body>
 </html>
