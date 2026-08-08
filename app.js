@@ -206,14 +206,37 @@ Blockly.Python['oled_print'] = function(block) {
   return 'oled.fill(0)\noled.text("' + text + '", 0, 0)\noled.show()\n';
 };
 
+// 1.11 บล็อกทำซ้ำตลอดเวลา (Loop Forever Safe Block - ป้องกันบอร์ดค้าง)
+Blockly.Blocks['loop_forever'] = {
+  init: function() {
+    this.appendDummyInput()
+        .appendField("ทำซ้ำตลอดเวลา (While True)");
+    this.appendStatementInput("DO")
+        .appendField("ทำ");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour(120);
+  }
+};
+Blockly.Python['loop_forever'] = function(block) {
+  var branch = Blockly.Python.statementToCode(block, 'DO');
+  if (!branch) {
+    branch = '    time.sleep(0.01)\n';
+  } else {
+    branch += '    time.sleep(0.01)\n';
+  }
+  Blockly.Python.definitions_['import_time'] = 'import time';
+  return 'while True:\n' + branch;
+};
+
 // ======================================================
 // 2. ระบบเชื่อมต่อ & โหลด Workspace
 // ======================================================
 var workspace = null;
-var isHardwareMode = true; 
-var connectionType = null; 
+var isHardwareMode = true;
+var connectionType = null;
 
-var serialPort = null; 
+var serialPort = null;
 var rxCharacteristic = null;
 
 const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
@@ -352,16 +375,18 @@ async function executeCode() {
         return;
     }
 
-    var saveAndRunScript = `with open('main.py', 'w') as f:\n    f.write(${JSON.stringify(code)})\n\nexec(open('main.py').read())\n`;
+    var saveAndRunScript = "with open('main.py', 'w') as f:\n    f.write(" + JSON.stringify(code) + ")\n\nexec(open('main.py').read())\n";
 
     if (connectionType === 'usb' && serialPort && serialPort.writable) {
         try {
             const encoder = new TextEncoder();
             let writer = serialPort.writable.getWriter();
-            await writer.write(encoder.encode("\x03\x03"));
+            
+            // ส่ง Ctrl+C 3 ครั้งเพื่อเบรกการทำงานลูปเดิมบน MicroPython REPL
+            await writer.write(encoder.encode("\x03\x03\x03"));
             writer.releaseLock();
 
-            await delay(300);
+            await delay(450); // เพิ่มเวลาให้บอร์ดหยุดลูปจริง
 
             writer = serialPort.writable.getWriter();
             const formattedCode = "\x05" + saveAndRunScript + "\x04";
@@ -376,7 +401,7 @@ async function executeCode() {
     } else if (connectionType === 'ble' && rxCharacteristic) {
         try {
             const encoder = new TextEncoder();
-            const formattedCode = "\x03\x03\x05" + saveAndRunScript + "\x04";
+            const formattedCode = "\x03\x03\x03\x05" + saveAndRunScript + "\x04";
             const data = encoder.encode(formattedCode);
 
             const chunkSize = 20;
